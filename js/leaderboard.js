@@ -38,7 +38,7 @@
       const rows = await Store.fetchBoard(range, LIMIT);
       render(rows);
       $("lbStatus").hidden = rows.length > 0;
-      $("lbStatus").textContent = range === "week" ? "No streaks in the last 7 days yet. Go set one." : "No streaks yet. Go set one.";
+      $("lbStatus").textContent = "No streaks yet.";
     } catch (e) {
       $("lbTable").hidden = true;
       $("lbStatus").textContent = Store.online

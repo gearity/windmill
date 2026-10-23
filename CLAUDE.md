@@ -12,7 +12,7 @@ It runs locally (double-click `index.html`) and online at https://gearity.github
 
 ## Writing style
 
-All text in this project follows Jacob's anti-AI writing guide: UI copy, the About dialog, code comments, R messages, chart titles, README, this file, commit messages, and the GitHub repo description. The guide is at `C:\Users\Jacob\Desktop\anti-ai-writing-guide.md`; the core rules are in `C:\Users\Jacob\.claude\CLAUDE.md`. In short: no em dashes, no "not X but Y" contrasts, no reflexive lists of three, no AI vocabulary, no bold-label bullet lists, no recap at the end.
+All text in this project follows Jacob's anti-AI writing guide: UI copy, the About dialog, code comments, R messages, chart titles, README, this file, commit messages, and the GitHub repo description. The guide is at `C:\Users\Jacob\Desktop\anti-ai-writing-guide.md`; the core rules are in `C:\Users\Jacob\.claude\CLAUDE.md`. In short: no em dashes, no "not X but Y" contrasts, no reflexive lists of three, no AI vocabulary, no bold-label bullet lists, no recap at the end. UI copy gets no filler explanations: no captions describing the page, no notes on how a feature works, no caveats or reassurance. Jacob cut the leaderboard's explanatory caption for exactly this.
 
 Keep the baseball voice. "Send him," "Hold him," "Take the box," "The read," "Back to the box," and scouting lines like "Cannon. Runners know about this arm." stay. The filter is for generic AI habits, not for the game's personality.
 
