@@ -9,7 +9,7 @@
 SAVANT_VIDEO <- "https://baseballsavant.mlb.com/sporty-videos?playId=%s"
 CLIP_RE <- "https://sporty-clips\\.mlb\\.com/[^\"'\\s<>]+\\.mp4"
 
-# The URL comes out of HTML, so base64 padding arrives as "&#x3D;&#x3D;" rather than "==".
+# The URL comes out of HTML, so its base64 padding arrives escaped: "&#x3D;&#x3D;" for "==".
 html_unescape <- function(x) {
   x <- str_replace_all(x, "&#x([0-9A-Fa-f]+);", \(m) intToUtf8(strtoi(str_sub(m, 4, -2), 16L), multiple = TRUE))
   x <- str_replace_all(x, "&#([0-9]+);", \(m) intToUtf8(as.integer(str_sub(m, 3, -2)), multiple = TRUE))

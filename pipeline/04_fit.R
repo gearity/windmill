@@ -3,13 +3,13 @@
 # logit P(safe) = calibIntercept + calibSlope * margin, where margin = throw arrival
 # + tag minus the runner's arrival in seconds (model.R). The two coefficients are a
 # logistic regression on every real send (see FIT_PARAMS in model.R for why only
-# those two). A second regression on the margin's pieces shows which ones actually
-# carry signal.
+# those two). A second regression on the margin's pieces shows which ones carry
+# signal.
 #
-# Caveat worth stating out loud: these are sends only. Coaches send when they like
-# the odds, so this is P(safe | the coach sent him), which is exactly the call the
-# game asks you to make. It says nothing reliable about holds, so the coach table
-# below compares coaches with breakeven directly instead of with the model.
+# These are sends only. Coaches send when they like the odds, so this estimates
+# P(safe | the coach sent him), which is the call the game asks you to make. It says
+# nothing reliable about holds, so the coach table below compares coaches with
+# breakeven directly.
 #
 # Output objects: K_FIT, model_fit, sends$p_model, holds$p_model, coach_tbl.
 # Files: pipeline/out/model_fit.json, model_terms.csv, model_calibration.csv,
@@ -42,7 +42,7 @@ score <- function(p) list(log_loss = round(log_loss(sends$safe, p), 4), brier = 
 metrics <- list(base_rate = score(oof_base), hand_tuned = score(p_hand), fitted_cv = score(oof))
 message("Out-of-sample scores:"); print(bind_rows(metrics, .id = "model"))
 
-# --- Which pieces of the margin carry signal? -------------------------------------
+# --- Signal in each piece of the margin ---------------------------------------------
 # Same physics, but each piece gets its own coefficient. If the model is right, ball
 # and throw time push toward safe (+) and run time toward out (-).
 terms_df <- sends |>
@@ -79,8 +79,8 @@ model_fit <- list(
 write_json(model_fit, file.path(OUT, "model_fit.json"), auto_unbox = TRUE, pretty = TRUE, digits = NA)
 
 # --- Real coaches vs. breakeven ------------------------------------------------------
-# No model needed: if sends succeed far more often than breakeven requires, coaches
-# are leaving runs on the table by holding runners who would usually have scored.
+# This part needs no model. If sends succeed far more often than breakeven requires,
+# coaches are holding runners who would usually have scored.
 coach <- bind_rows(sends |> mutate(call = "send"), holds |> mutate(call = "hold"))
 coach_tbl <- bind_rows(coach |> mutate(outs = as.character(outs)), coach |> mutate(outs = "all")) |>
   group_by(outs) |>
@@ -116,7 +116,7 @@ g1 <- ggplot(calib, aes(predicted, observed)) +
   scale_y_continuous(labels = scales::percent, limits = c(min(calib$predicted, calib$observed) - 0.03, 1)) +
   scale_size_area(max_size = 6, guide = "none") +
   coord_equal() +
-  labs(title = "Does the timing model know when he scores?",
+  labs(title = "Timing model: predicted vs. actual chance he scores",
        subtitle = sprintf("Out-of-sample deciles. Brier %.3f vs. %.3f for a flat rate; AUC %.2f.",
                           metrics$fitted_cv$brier, metrics$base_rate$brier, metrics$fitted_cv$auc),
        x = "Model: chance he scores", y = "Actually scored", caption = caption) +
@@ -146,7 +146,7 @@ g3 <- ggplot(by_outs, aes(y = outs)) +
             colour = "#eef0e8", hjust = 0, vjust = 2.2, size = 3.6) +
   scale_x_continuous(labels = scales::percent, limits = c(0.3, 1.02)) +
   scale_y_discrete(limits = rev) +
-  labs(title = "Third base coaches only send sure things",
+  labs(title = "Third base coaches only send near-sure things",
        subtitle = "Runner on second, single to the outfield: how often sends scored vs. the success rate that breaks even",
        x = NULL, y = NULL,
        caption = sprintf("%s decisions (%s sends, %s holds), %s. Breakeven from RE24 on the same seasons.",

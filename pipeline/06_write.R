@@ -37,6 +37,8 @@ meta <- list(
   ref = ref,
   n_safe = sum(pool$safe), n_out = sum(pool$safe == 0),
   n_postseason = sum(pool$game_type != "R"),
+  # 0th..100th percentiles of P(safe) over every real send; the reveal ranks each play against them.
+  send_p_quantiles = round(unname(quantile(sends$p_model, seq(0, 1, 0.01))), 4),
   game_types = as.list(GAME_TYPE_LABEL[!is.na(GAME_TYPE_LABEL)])
 )
 fit_js <- list(K = model_fit$K, n = model_fit$n, n_out = model_fit$n_out, seasons = model_fit$seasons,

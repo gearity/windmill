@@ -1,7 +1,6 @@
 // Windmill: the timing model.
-// A deliberately simple, transparent physics estimate, used for (1) the animation and
-// (2) the "chance he scores" grade on the reveal. The streak is always graded on the
-// REAL outcome of the play.
+// A simple physics estimate, kept readable on purpose. It drives the animation and the
+// "chance he scores" grade on the reveal. The streak is always graded on the real outcome.
 //
 // pipeline/model.R is this file's twin in R. Keep them in lockstep: the pipeline fits
 // calibIntercept and calibSlope on real sends and ships them in window.MODEL_FIT, and
@@ -112,7 +111,7 @@
     // The call has to be made as the runner approaches third.
     const decisionT = Math.max(0.9, Math.min(tField + 0.15, tAt3B - 0.2));
 
-    // The animation always shows the REAL result, so nudge the throw if the model disagrees.
+    // The animation always shows the real result, so nudge the throw if the model disagrees.
     let throwArriveShown = throwArrive;
     if (play.result === "out") throwArriveShown = Math.min(throwArrive, tHome - 0.35);
     if (play.result === "safe") throwArriveShown = Math.max(throwArrive, tHome + 0.12);

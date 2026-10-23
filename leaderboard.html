@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leaderboard: Windmill</title>
+  <meta name="description" content="Longest streaks of right calls in Windmill, the third base coach simulator.">
+  <meta name="theme-color" content="#1e3a2b">
+  <link rel="canonical" href="https://gearity.github.io/windmill/leaderboard.html">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gearity.github.io/windmill/leaderboard.html">
+  <meta property="og:title" content="Windmill leaderboard">
+  <meta property="og:description" content="Longest streaks of right calls in Windmill, the third base coach simulator.">
+  <meta property="og:image" content="https://gearity.github.io/windmill/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="board board-page-header">
+    <div class="brand">
+      <h1><a href="./">Windmill</a></h1>
+      <p>You're coaching third. Send him or hold him.</p>
+    </div>
+    <a class="call call-send back-btn" href="./">Back to the box</a>
+  </header>
+
+  <main class="lb">
+    <section class="panel">
+      <div class="lb-head">
+        <h2 class="panel-title">Leaderboard</h2>
+        <div class="lb-tabs" role="tablist">
+          <button type="button" role="tab" class="lb-tab" data-range="all" aria-selected="true">All time</button>
+          <button type="button" role="tab" class="lb-tab" data-range="week" aria-selected="false">Last 7 days</button>
+        </div>
+      </div>
+      <p class="lb-note">Each coach's longest streak of right calls. The clock is the most generous setting used during the streak. Names aren't checked, so it runs on the honor system.</p>
+      <p class="lb-status" id="lbStatus">Loading the board.</p>
+      <table class="lb-table" id="lbTable" hidden>
+        <thead><tr><th>#</th><th>Coach</th><th class="num">Streak</th><th>Clock</th><th>When</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/leaderboard.js"></script>
+</body>
+</html>

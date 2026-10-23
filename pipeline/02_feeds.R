@@ -1,6 +1,6 @@
 # Step 2: what the runner from second actually did, from the MLB game feed.
 # -----------------------------------------------------------------------------
-# Statcast's description text is easy to misread (a runner from FIRST thrown out
+# Statcast's description text is easy to misread (a runner from first thrown out
 # at home, a rundown, a run that scored on a later throw). The game feed records
 # each runner's movement and the fielders credited on it, so labels come from there:
 #   safe              runner from 2nd scored on the play

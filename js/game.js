@@ -28,6 +28,9 @@
     raf: 0,
     clockStart: 0,
     video: null,
+    callClock: 5,       // the clock setting for the call in progress
+    streakClock: null,  // most lenient clock used during the current streak (shown on the leaderboard)
+    posted: 0,          // the current streak's value as last sent to the leaderboard
   };
 
   const field = new window.Field($("field"));
@@ -64,8 +67,25 @@
     box.appendChild(ol);
   }
 
+  // ---------- leaderboard ----------
+  // A streak goes to the board when it ends, when the coach switches, or when the page is
+  // hidden mid-streak (the visitor may never come back). The board keeps each coach's best,
+  // so posting a run at 5 and again at 8 is harmless.
+  const leniency = (sec) => (sec === 0 ? Infinity : sec);
+  function postStreak(value, keepalive) {
+    if (!state.user || value <= state.posted) return;
+    Store.submitStreak(state.user, value, state.streakClock ?? state.timer, keepalive);
+    state.posted = value;
+  }
+  function resetStreak() { state.streak = 0; state.posted = 0; state.streakClock = null; }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && state.streak > 0) postStreak(state.streak, true);
+  });
+  if (Store.online) document.querySelectorAll(".board-link").forEach((a) => { a.hidden = false; });
+
   // ---------- login ----------
   function showLogin() {
+    if (state.streak > 0) postStreak(state.streak);
     cancelAnimationFrame(state.raf);
     stopVideo();
     state.phase = "login";
@@ -82,7 +102,7 @@
     if (!name) return;
     Store.signIn(name);
     state.user = name;
-    state.streak = 0;
+    resetStreak();
     $("login").hidden = true;
     renderHeader();
     nextPlay();
@@ -101,13 +121,13 @@
     if (fit && fit.metrics) {
       const m = fit.metrics;
       $("fitNote").textContent =
-        `The physics is hand-set; how the time gap turns into odds was fit by maximum likelihood on ` +
-        `${n(fit.n)} real sends from ${span(fit.seasons)}, ${n(fit.n_out)} of them thrown out. ` +
-        `Be warned: coaches mostly send sure things, so nearly every send scores and the odds rarely stray far from that. ` +
-        `On plays it wasn't fit on, the model ranks a random thrown-out runner below a random safe one ` +
-        `${Math.round(m.fitted_cv.auc * 100)}% of the time.`;
+        `The running and throwing times use fixed physics. The step that turns the time gap into a chance of scoring ` +
+        `was fit on ${n(fit.n)} real sends from ${span(fit.seasons)}, ${n(fit.n_out)} of them thrown out at home. ` +
+        `Coaches mostly send sure things, so nearly every send scores and the model's numbers sit close together. ` +
+        `On plays it wasn't fit on, it picks the thrown-out runner as the riskier send ${Math.round(m.fitted_cv.auc * 100)}% of the time. ` +
+        `The reveal also ranks each play against every real send, so you can see how bold the call was.`;
     } else {
-      $("fitNote").textContent = "The model's constants are hand-set estimates. Running the data pipeline fits them to real sends.";
+      $("fitNote").textContent = "The model's numbers are hand-set estimates until the data pipeline fits them to real sends.";
     }
     $("poolNote").textContent = META.demo ? "" :
       `The pool has ${n(PLAYS.length)} plays from ${span(META.seasons)}` + (META.n_postseason ? ", postseason included." : ".");
@@ -176,7 +196,7 @@
     $("armWords").textContent = p.fielder.imputed ? NO_DATA : armWords(p.fielder.arm_mph);
     $("bbType").textContent = BB_WORDS[p.batted_ball.type] || "Base hit";
     $("bbDist").textContent = Math.round(tl.throwDist) + " ft from home";
-    $("trailing").textContent = p.runner_on_first ? "Runner from first + batter" : "Just the batter";
+    $("trailing").textContent = p.runner_on_first ? "Runner from first and the batter" : "Just the batter";
     $("demoNote").hidden = !(META.demo || p.demo);
 
     $("situation").hidden = false;
@@ -185,8 +205,17 @@
     $("sitRound").hidden = !round;
     $("sitInning").textContent = `${p.half} ${ordinal(p.inning)}`;
     $("sitOuts").innerHTML = [0, 1, 2].map((i) => `<i class="${i < p.outs ? "on" : ""}"></i>`).join("") +
-      `<span class="sr-only">${p.outs} out</span>`;
-    $("sitScore").textContent = `${p.bat_team} ${p.score.bat}, ${p.fld_team} ${p.score.fld}`;
+      `<span class="sr-only">${p.outs} ${p.outs === 1 ? "out" : "outs"}</span>`;
+    // Away team first, like a TV scorebug.
+    const top = p.half === "Top";
+    const teams = [[p.bat_team, p.score.bat], [p.fld_team, p.score.fld]];
+    if (!top) teams.reverse();
+    $("sitScore").replaceChildren(...teams.map(([team, runs]) => {
+      const s = document.createElement("span");
+      const em = document.createElement("em"); em.textContent = runs;
+      s.append(team, em);
+      return s;
+    }));
   }
 
   // ---------- animation ----------
@@ -232,6 +261,7 @@
     setCallsEnabled(true);
     $("sendBtn").focus({ preventScroll: true });
     const limit = state.timer;
+    state.callClock = limit;
     $("callHint").textContent = limit ? `Your call. ${limit} seconds.` : "Your call. No clock.";
     const tl = state.tl;
     state.clockStart = performance.now();
@@ -280,7 +310,13 @@
     const p = state.play, tl = state.tl, choice = state.choice;
     const right = (choice === "send" && p.result === "safe") || (choice === "hold" && p.result === "out");
     const before = state.streak;
-    state.streak = right ? state.streak + 1 : 0;
+    if (right) {
+      state.streak += 1;
+      if (state.streakClock == null || leniency(state.callClock) > leniency(state.streakClock)) state.streakClock = state.callClock;
+    } else {
+      if (before > 0) postStreak(before);
+      resetStreak();
+    }
     Store.record(state.user, right, state.streak);
     renderHeader();
     renderReveal(p, tl, choice, right, before);
@@ -323,9 +359,36 @@
       if (right) proc += " You got away with one.";
     }
     $("process").textContent = proc;
+    renderRisk(tl.pSafe);
 
     showClip(p);
     $("nextBtn").focus({ preventScroll: true });
+  }
+
+  // Nearly every real send scores, so the model's P(safe) sits in a narrow band and almost
+  // always clears breakeven. Ranking the play against every real send shows how bold it was.
+  // META.send_p_quantiles holds the 0th..100th percentiles of P(safe) across those sends.
+  function saferShare(p) {
+    const q = META.send_p_quantiles;
+    if (!q || q.length !== 101) return null;
+    if (p <= q[0]) return 100;
+    if (p >= q[100]) return 0;
+    let k = 0;
+    while (q[k + 1] < p) k++;
+    const frac = q[k + 1] > q[k] ? (p - q[k]) / (q[k + 1] - q[k]) : 0;
+    return Math.round(100 - (k + frac));
+  }
+
+  function renderRisk(pSafe) {
+    const el = $("risk");
+    const safer = saferShare(pSafe);   // percent of real sends the model rated as safer bets
+    el.hidden = safer == null;
+    if (safer == null) return;
+    const fit = window.WM.FIT;
+    const pool = fit ? `the ${Number(fit.n).toLocaleString("en-US")} sends real coaches made` : "real sends";
+    const strong = document.createElement("strong");
+    strong.textContent = (safer >= 50 ? safer : 100 - safer) + "%";
+    el.replaceChildren(`By the model, ${safer >= 50 ? "riskier" : "safer"} than `, strong, ` of ${pool}.`);
   }
 
   // ---------- clip ----------
@@ -372,7 +435,6 @@
   // After the play, the clip takes over the field area; the toggle flips back to the final frame.
   function setClipView(show) {
     $("clipStage").hidden = !show;
-    $("situation").hidden = show;
     const btn = $("clipToggle");
     if (btn) btn.textContent = show ? "Show the field" : "Show the clip";
     if (state.video) show ? playVideo(state.video) : state.video.pause();

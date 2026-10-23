@@ -1,19 +1,19 @@
 # Windmill data pipeline
 # -----------------------------------------------------------------------------
-# Builds data/plays.js from real MLB data, fits the timing model, and writes
+# Builds data/plays.js from real MLB data, calibrates the timing model, and writes
 # analysis tables and charts to pipeline/out/.
 #
-#   1. Statcast pull (Baseball Savant), RE24, candidate plays     01_statcast.R
+#   1. Statcast pull (Baseball Savant), RE24, candidate plays       01_statcast.R
 #   2. Label each play from the MLB game feed (send/hold, safe/out) 02_feeds.R
-#   3. Sprint speed, arm strength, names                           03_players.R
-#   4. Fit the timing model; grade real coaches against it          04_fit.R
-#   5. Choose the play pool; find each play's broadcast clip        05_clips.R
-#   6. Write data/plays.js and pipeline/out/*.csv                   06_write.R
+#   3. Sprint speed, arm strength, names                             03_players.R
+#   4. Calibrate the timing model; compare coaches with breakeven    04_fit.R
+#   5. Choose the play pool; find each play's broadcast clip         05_clips.R
+#   6. Write data/plays.js and pipeline/out/*.csv                    06_write.R
 #
 # Run from the repo root:   Rscript pipeline/run.R
 # Or in RStudio:            source("pipeline/run.R")
-# The first run downloads a lot (about an hour). Everything is cached in
-# pipeline/cache/, so reruns take a minute or two.
+# The first run downloads for about 40 minutes. Everything is cached in
+# pipeline/cache/, so reruns take about two.
 # -----------------------------------------------------------------------------
 
 suppressPackageStartupMessages({

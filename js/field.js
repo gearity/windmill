@@ -35,7 +35,7 @@
       this.play = null;
       this.tl = null;
       this.resize();
-      // The canvas changes size with the layout (panel stacking, rotation), not just the window.
+      // The canvas resizes with the layout (panel stacking, phone rotation) as well as the window.
       const redraw = () => { this.resize(); if (this.lastFrame) this.draw(this.lastFrame); };
       if (window.ResizeObserver) new ResizeObserver(redraw).observe(canvas);
       else window.addEventListener("resize", redraw);
