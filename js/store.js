@@ -29,7 +29,8 @@
   // ---------- Supabase (REST, no library) ----------
   const cfg = window.WINDMILL_CONFIG || {};
   const online = !!(cfg.supabaseUrl && cfg.supabaseKey);
-  const base = online ? cfg.supabaseUrl.replace(/\/+$/, "") + "/rest/v1" : "";
+  // Accepts the project URL with or without the /rest/v1 suffix the dashboard shows.
+  const base = online ? cfg.supabaseUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/, "") + "/rest/v1" : "";
   function headers() {
     const h = { apikey: cfg.supabaseKey, "Content-Type": "application/json" };
     // Older projects use a JWT "anon" key, which also goes in Authorization. New sb_publishable_ keys don't.

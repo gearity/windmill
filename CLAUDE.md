@@ -154,7 +154,7 @@ The look is a painted-steel ballpark manual scoreboard: deep green board, a rive
 
 ## Next steps
 
-1. Leaderboard keys: fill in `js/config.js` once Jacob creates the Supabase project, then test a real post and the board, and push.
+1. The leaderboard is connected (Supabase project `ontyfvpcpcjqxktghmed`, free tier, created Oct 23 2026). Tested end to end: a streak posts from the game and reads back from both views, and the public key can't edit or delete rows or insert an invalid clock. Jacob moderates by deleting rows in the Supabase dashboard (Table Editor, or `delete from public.streaks where ...` in the SQL editor). Free projects pause after a week without traffic; if the board stops loading, restore the project from the dashboard.
 2. Model features worth trying: hang time from launch angle for air balls instead of the flat `ballFactor`, or the per-piece regression (`model_terms.csv`) as the game's model in place of the single margin.
 3. The LinkedIn write-up (Jacob asked to be reminded). Lead with `coaches_vs_breakeven.png`: with nobody out, coaches send 48% of the time and those sends score 97.6% against a 74% breakeven, so they're holding runners who would usually score (the known finding that coaches are too conservative, on 2024 to 2026 data). Back it with `send_summary_by_outs.csv` and the finding that arm strength doesn't separate safe from out among sends. Match the voice of his "Scottie Effect" post: a punchy, specific question, a clear finding, and a chart.
 
