@@ -45,38 +45,13 @@
   const FIT = window.MODEL_FIT || null;
   if (FIT && FIT.K) Object.assign(K, FIT.K);
 
-  // Approximate MLB run expectancy (RE24), outs 0/1/2. The pipeline replaces this with
-  // a table computed from the same seasons as the plays by defining window.RE24.
-  const DEFAULT_RE24 = {
-    "___": [0.481, 0.254, 0.098],
-    "1__": [0.859, 0.509, 0.224],
-    "_2_": [1.100, 0.664, 0.319],
-    "__3": [1.353, 0.950, 0.353],
-    "12_": [1.437, 0.884, 0.429],
-    "1_3": [1.784, 1.130, 0.478],
-    "_23": [1.920, 1.352, 0.570],
-    "123": [2.282, 1.520, 0.736],
-  };
-
-  function re(state, outs) {
-    if (outs >= 3) return 0;
-    const row = (window.RE24 && window.RE24[state]) || DEFAULT_RE24[state];
-    const v = row[outs];
-    return typeof v === "number" ? v : DEFAULT_RE24[state][outs];
-  }
-
-  // Breakeven P(safe) for sending the runner from second on a base hit.
-  // Assumption: on the throw home, every trailing runner (including the batter) takes one extra base.
-  //   Hold:     runners end on 1st & 3rd (or loaded if a runner started on 1st)
-  //   Safe:     +1 run, trailing runners on 2nd (and 3rd)
-  //   Out:      +1 out, trailing runners on 2nd (and 3rd)
-  function breakeven(outs, runnerOnFirst) {
-    const hold = re(runnerOnFirst ? "123" : "1_3", outs);
-    const after = runnerOnFirst ? "_23" : "_2_";
-    const safe = 1 + re(after, outs);
-    const out = re(after, outs + 1);
-    const p = (hold - out) / (safe - out);
-    return Math.min(0.99, Math.max(0.01, p));
+  // About 97% of real sends score, but the game deals safe and out plays 50/50. Bayes' rule
+  // swaps the real prior for the game's: multiply the odds by (out rate / safe rate).
+  // pGame is the chance this play, dealt by this game, is one where he scored.
+  const REAL_SAFE_RATE = FIT && FIT.n ? 1 - FIT.n_out / FIT.n : 0.97;
+  function gameChance(pReal) {
+    const odds = (pReal / (1 - pReal)) * ((1 - REAL_SAFE_RATE) / REAL_SAFE_RATE);
+    return odds / (1 + odds);
   }
 
   function hypot(a, b) { return Math.sqrt(a * a + b * b); }
@@ -120,10 +95,10 @@
     return {
       lead, v, start, tAt3B, tHome, tField, release, fieldSpot, throwDist, vThrow,
       throwArrive, throwArriveShown, margin, pSafe, decisionT,
+      pGame: gameChance(pSafe),
       fielderStart: OF_START[play.fielder.pos] || OF_START.CF,
-      breakeven: breakeven(outs, !!play.runner_on_first),
     };
   }
 
-  window.WM = { BASES, OF_START, K, FIT, timeline, breakeven, MPH_TO_FPS };
+  window.WM = { BASES, OF_START, K, FIT, timeline, gameChance, MPH_TO_FPS };
 })();

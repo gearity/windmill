@@ -4,7 +4,7 @@
   const PLAYS = window.PLAYS || [];
   const META = window.PLAYS_META || {};
   const Store = window.Store;
-  const TIMER_CHOICES = [3, 5, 8, 12, 0];
+  const TIMER_CHOICES = [3, 5, 8, 0];   // seconds: hard, regular, easy, no clock
   // Everything after the call (throw, dash home, hold, replay) plays this much faster than
   // real time. Runner and ball speed up together, so the safe/out race is unchanged.
   const FINISH_SPEED = 1.3;
@@ -13,7 +13,18 @@
   const REF = Object.assign({
     speed: { min: 23, max: 31, avg: 27.0 },
     arm: { min: 76, max: 100, avg: 87.5 },
+    dist: { min: 160, max: 320, avg: 240 },
   }, META.ref || {});
+
+  // Placeholder for the coach name box: each team's third base coach in 2026.
+  const COACHES = [
+    "Buck Britton", "Kyle Hudson", "Luis Rojas", "Brady Williams", "Carlos Febles",
+    "Justin Jirschele", "Rouglas Odor", "Joey Cora", "Vance Wilson", "Ramon Borrego",
+    "Tony Perezchica", "Keith Johnson", "Bobby Crosby", "Carlos Cardoza", "Corey Ragsdale",
+    "Tommy Watkins", "Blake Lalli", "Tim Leiper", "Dusty Wathan", "Victor Estevez",
+    "Quintin Berry", "Willie Harris", "Matt Erickson", "Tony Beasley", "Ron Warner",
+    "J.R. House", "Andy Gonzalez", "Dino Ebel", "Bob Henley", "Gary Pettis",
+  ];
 
   const savedTimer = Number(Store.timer(5));
   const state = {
@@ -81,7 +92,7 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden" && state.streak > 0) postStreak(state.streak, true);
   });
-  if (Store.online) document.querySelectorAll(".board-link").forEach((a) => { a.hidden = false; });
+  if (Store.online) document.querySelectorAll(".online-only").forEach((a) => { a.hidden = false; });
 
   // ---------- login ----------
   function showLogin() {
@@ -91,6 +102,7 @@
     state.phase = "login";
     $("login").hidden = false;
     $("username").value = Store.lastUser();
+    $("username").placeholder = "e.g. " + COACHES[Math.floor(Math.random() * COACHES.length)];
     renderLocalBoard();
     setCallsEnabled(false);
     $("username").focus();
@@ -121,13 +133,10 @@
     if (fit && fit.metrics) {
       const m = fit.metrics;
       $("fitNote").textContent =
-        `The running and throwing times use fixed physics. The step that turns the time gap into a chance of scoring ` +
-        `was fit on ${n(fit.n)} real sends from ${span(fit.seasons)}, ${n(fit.n_out)} of them thrown out at home. ` +
-        `Coaches mostly send sure things, so nearly every send scores and the model's numbers sit close together. ` +
-        `On plays it wasn't fit on, it picks the thrown-out runner as the riskier send ${Math.round(m.fitted_cv.auc * 100)}% of the time. ` +
-        `The reveal also ranks each play against every real send, so you can see how bold the call was.`;
+        `It was fit on ${n(fit.n)} real sends from ${span(fit.seasons)}, ${n(fit.n_out)} of them thrown out at home. ` +
+        `On plays it wasn't fit on, it picks the thrown-out runner as the riskier send ${Math.round(m.fitted_cv.auc * 100)}% of the time.`;
     } else {
-      $("fitNote").textContent = "The model's numbers are hand-set estimates until the data pipeline fits them to real sends.";
+      $("fitNote").textContent = "Its numbers are hand-set estimates until the data pipeline fits them to real sends.";
     }
     $("poolNote").textContent = META.demo ? "" :
       `The pool has ${n(PLAYS.length)} plays from ${span(META.seasons)}` + (META.n_postseason ? ", postseason included." : ".");
@@ -167,6 +176,14 @@
     if (d >= -5) return "Below average.";
     return "Weak arm. Runners test him.";
   }
+  function distWords(v) {
+    const d = v - REF.dist.avg;
+    if (d >= 40) return "Deep. Long throw home.";
+    if (d >= 15) return "A little deep.";
+    if (d >= -15) return "Normal depth.";
+    if (d >= -40) return "Shallow.";
+    return "Very shallow. Short throw home.";
+  }
   const BB_WORDS = { ground_ball: "Ground ball", line_drive: "Line drive", fly_ball: "Fly ball", popup: "Bloop" };
   const POS_WORDS = { LF: "Left fielder", CF: "Center fielder", RF: "Right fielder" };
   const NO_DATA = "No Statcast reading, so this is the league average.";
@@ -194,9 +211,12 @@
     statVal($("fielderArm"), p.fielder.arm_mph.toFixed(1) + " mph", p.fielder.imputed);
     meter($("armMeter"), p.fielder.arm_mph, REF.arm);
     $("armWords").textContent = p.fielder.imputed ? NO_DATA : armWords(p.fielder.arm_mph);
+    statVal($("bbDist"), Math.round(tl.throwDist) + " ft", false);
+    meter($("distMeter"), tl.throwDist, REF.dist);
+    $("distWords").textContent = distWords(tl.throwDist);
     $("bbType").textContent = BB_WORDS[p.batted_ball.type] || "Base hit";
-    $("bbDist").textContent = Math.round(tl.throwDist) + " ft from home";
-    $("trailing").textContent = p.runner_on_first ? "Runner from first and the batter" : "Just the batter";
+    $("bbEV").textContent = p.batted_ball.ev_imputed ? "n/a" : p.batted_ball.launch_speed.toFixed(1) + " mph";
+    $("trailing").textContent = p.runner_on_first ? "Batter and runner on first" : "Just the batter";
     $("demoNote").hidden = !(META.demo || p.demo);
 
     $("situation").hidden = false;
@@ -343,11 +363,9 @@
     const when = [roundLabel(p), p.date && p.date !== "Demo" ? niceDate(p.date) : ""].filter(Boolean).join(", ");
     $("revealDesc").textContent = p.description + (when ? ` (${when})` : "");
 
-    $("pSafe").textContent = pct(tl.pSafe);
-    $("beOuts").textContent = p.outs === 1 ? "1 out" : `${p.outs} outs`;
-    $("beVal").textContent = pct(tl.breakeven);
+    $("pSafe").textContent = pct(tl.pGame);
 
-    const modelCall = tl.pSafe >= tl.breakeven ? "send" : "hold";
+    const modelCall = tl.pGame >= 0.5 ? "send" : "hold";
     const modelWord = modelCall === "send" ? "a send" : "a hold";
     let proc;
     if (choice === "timeout") proc = `By the numbers this was ${modelWord}.`;
@@ -359,36 +377,9 @@
       if (right) proc += " You got away with one.";
     }
     $("process").textContent = proc;
-    renderRisk(tl.pSafe);
 
     showClip(p);
     $("nextBtn").focus({ preventScroll: true });
-  }
-
-  // Nearly every real send scores, so the model's P(safe) sits in a narrow band and almost
-  // always clears breakeven. Ranking the play against every real send shows how bold it was.
-  // META.send_p_quantiles holds the 0th..100th percentiles of P(safe) across those sends.
-  function saferShare(p) {
-    const q = META.send_p_quantiles;
-    if (!q || q.length !== 101) return null;
-    if (p <= q[0]) return 100;
-    if (p >= q[100]) return 0;
-    let k = 0;
-    while (q[k + 1] < p) k++;
-    const frac = q[k + 1] > q[k] ? (p - q[k]) / (q[k + 1] - q[k]) : 0;
-    return Math.round(100 - (k + frac));
-  }
-
-  function renderRisk(pSafe) {
-    const el = $("risk");
-    const safer = saferShare(pSafe);   // percent of real sends the model rated as safer bets
-    el.hidden = safer == null;
-    if (safer == null) return;
-    const fit = window.WM.FIT;
-    const pool = fit ? `the ${Number(fit.n).toLocaleString("en-US")} sends real coaches made` : "real sends";
-    const strong = document.createElement("strong");
-    strong.textContent = (safer >= 50 ? safer : 100 - safer) + "%";
-    el.replaceChildren(`By the model, ${safer >= 50 ? "riskier" : "safer"} than `, strong, ` of ${pool}.`);
   }
 
   // ---------- clip ----------
@@ -476,7 +467,7 @@
   $("holdBtn").addEventListener("click", () => decide("hold"));
 
   document.addEventListener("keydown", (e) => {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || $("about").open) return;
+    if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName) || $("about").open || $("suggest").open) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (state.phase === "decide") {
@@ -486,6 +477,24 @@
       if ((e.target.tagName === "BUTTON" && e.target !== $("nextBtn")) || e.target.tagName === "VIDEO" || e.target.tagName === "A") return;
       e.preventDefault(); nextPlay();
     }
+  });
+
+  // ---------- suggestions ----------
+  $("suggestBtn").addEventListener("click", () => {
+    $("suggestStatus").textContent = "";
+    $("suggest").showModal();
+    $("suggestText").focus();
+  });
+  $("suggestClose").addEventListener("click", () => $("suggest").close());
+  $("suggestForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("suggestText").value.trim();
+    if (!text) return;
+    $("suggestSend").disabled = true;
+    const ok = await Store.submitSuggestion(text, $("suggestName").value.trim() || state.user || "");
+    $("suggestStatus").textContent = ok ? "Sent. Thanks." : "That didn't go through. Try again in a minute.";
+    if (ok) $("suggestText").value = "";
+    $("suggestSend").disabled = false;
   });
 
   // ---------- consistency check: the browser model must match the R pipeline ----------

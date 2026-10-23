@@ -86,14 +86,29 @@
       }).catch(() => {});
     },
 
-    // Each coach's best streak, all time or the last 7 days.
-    async fetchBoard(range, limit) {
+    // Each coach's best streak on one clock setting, all time or the last 7 days.
+    async fetchBoard(range, clock, limit) {
       if (!online) throw new Error("offline");
       const view = range === "week" ? "board_week" : "board_all_time";
-      const res = await fetch(`${base}/${view}?select=coach,streak,clock,created_at&order=streak.desc,created_at.asc&limit=${limit}`,
-        { headers: headers() });
+      const res = await fetch(`${base}/${view}?select=coach,streak,created_at&clock=eq.${clock}` +
+        `&order=streak.desc,created_at.asc&limit=${limit}`, { headers: headers() });
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
+    },
+
+    // Suggestions are write-only from the site; Jacob reads them in the Supabase dashboard.
+    async submitSuggestion(message, name) {
+      if (!online) return false;
+      try {
+        const res = await fetch(base + "/suggestions", {
+          method: "POST",
+          headers: Object.assign(headers(), { Prefer: "return=minimal" }),
+          body: JSON.stringify({ message: message.slice(0, 2000), name: name.slice(0, 40) || null, device }),
+        });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
     },
   };
 })();

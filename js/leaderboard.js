@@ -1,11 +1,15 @@
-// Windmill: the leaderboard page.
+// Windmill: the leaderboard page. One board per clock setting, all time or the last 7 days.
 (function () {
   const $ = (id) => document.getElementById(id);
   const Store = window.Store;
   const me = Store.lastUser().toLowerCase();
   const LIMIT = 50;
+  const CLOCKS = [3, 5, 8, 0];
 
-  function clockText(sec) { return sec === 0 ? "Off" : `${sec} sec`; }
+  // Open on the mode the visitor plays.
+  const saved = Number(Store.timer(5));
+  const view = { range: "all", clock: CLOCKS.includes(saved) ? saved : 5 };
+
   function whenText(iso) {
     const d = new Date(iso);
     return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -19,7 +23,7 @@
       if (r.streak !== prev) { rank = i + 1; prev = r.streak; }   // ties share a rank
       const tr = document.createElement("tr");
       if (r.coach.toLowerCase() === me) tr.className = "me";
-      [rank, r.coach, r.streak, clockText(r.clock), whenText(r.created_at)].forEach((v, j) => {
+      [rank, r.coach, r.streak, whenText(r.created_at)].forEach((v, j) => {
         const td = document.createElement("td");
         td.textContent = v;
         if (j === 2) td.className = "num";
@@ -30,12 +34,13 @@
     $("lbTable").hidden = !rows.length;
   }
 
-  async function load(range) {
-    document.querySelectorAll(".lb-tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.range === range)));
+  async function load() {
+    document.querySelectorAll("#rangeTabs .lb-tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.range === view.range)));
+    document.querySelectorAll("#modeTabs .lb-tab").forEach((b) => b.setAttribute("aria-selected", String(Number(b.dataset.clock) === view.clock)));
     $("lbStatus").hidden = false;
     $("lbStatus").textContent = "Loading the board.";
     try {
-      const rows = await Store.fetchBoard(range, LIMIT);
+      const rows = await Store.fetchBoard(view.range, view.clock, LIMIT);
       render(rows);
       $("lbStatus").hidden = rows.length > 0;
       $("lbStatus").textContent = "No streaks yet.";
@@ -47,6 +52,7 @@
     }
   }
 
-  document.querySelectorAll(".lb-tab").forEach((b) => b.addEventListener("click", () => load(b.dataset.range)));
-  load("all");
+  document.querySelectorAll("#rangeTabs .lb-tab").forEach((b) => b.addEventListener("click", () => { view.range = b.dataset.range; load(); }));
+  document.querySelectorAll("#modeTabs .lb-tab").forEach((b) => b.addEventListener("click", () => { view.clock = Number(b.dataset.clock); load(); }));
+  load();
 })();

@@ -59,6 +59,7 @@ plays_all <- cands |>
     # Savant hit coordinates to feet, home plate at (0, 0), +y toward center field.
     x_ft = round((hc_x - 125.42) * 2.5, 1),
     y_ft = round((198.27 - hc_y) * 2.5, 1),
+    ev_imputed = is.na(launch_speed),   # the game shows "n/a" for these instead of the 92 mph stand-in
     launch_speed = round(coalesce(launch_speed, 92), 1)
   ) |>
   filter(y_ft > MIN_DEPTH_FT) |>
@@ -72,6 +73,11 @@ plays_all <- cands |>
 
 sends <- plays_all |> filter(label %in% c("safe", "out")) |> mutate(safe = as.integer(label == "safe"))
 holds <- plays_all |> filter(label == "held")
+
+# Reference points for the distance meter: where real sends were fielded.
+send_dist <- sqrt(sends$x_ft^2 + sends$y_ft^2)
+ref$dist <- list(min = round(quantile(send_dist, 0.02)[[1]]), max = round(quantile(send_dist, 0.98)[[1]]),
+                 avg = round(mean(send_dist)))
 
 # --- Names --------------------------------------------------------------------
 people_file <- file.path(CACHE, "people.rds")

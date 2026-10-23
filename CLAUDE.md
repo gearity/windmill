@@ -14,11 +14,11 @@ It runs locally (double-click `index.html`) and online at https://gearity.github
 
 All text in this project follows Jacob's anti-AI writing guide: UI copy, the About dialog, code comments, R messages, chart titles, README, this file, commit messages, and the GitHub repo description. The guide is at `C:\Users\Jacob\Desktop\anti-ai-writing-guide.md`; the core rules are in `C:\Users\Jacob\.claude\CLAUDE.md`. In short: no em dashes, no "not X but Y" contrasts, no reflexive lists of three, no AI vocabulary, no bold-label bullet lists, no recap at the end. UI copy gets no filler explanations: no captions describing the page, no notes on how a feature works, no caveats or reassurance. Jacob cut the leaderboard's explanatory caption for exactly this.
 
-Keep the baseball voice. "Send him," "Hold him," "Take the box," "The read," "Back to the box," and scouting lines like "Cannon. Runners know about this arm." stay. The filter is for generic AI habits, not for the game's personality.
+Keep the baseball voice. "Send him," "Hold him," "Take the box," "The situation," "Back to the box," and scouting lines like "Cannon. Runners know about this arm." stay. The filter is for generic AI habits, not for the game's personality.
 
 ## The game
 
-A real MLB play: the runner on second is rounding third on a single to the outfield. An animated top-down field plays the hit out, then freezes as the runner nears third. The player has an adjustable clock (default 5 seconds; 3, 5, 8, 12 or off) to send or hold, by button or the S and H keys. Then the play resolves, the real result shows, and the broadcast clip plays.
+A real MLB play: the runner on second is rounding third on a single to the outfield. An animated top-down field plays the hit out, then freezes as the runner nears third. The player picks a clock (3 seconds is hard, 5 regular and the default, 8 easy, or no clock) and sends or holds by button or the S and H keys. Then the play resolves, the real result shows, and the broadcast clip plays.
 
 | Call | Real result | Streak |
 |---|---|---|
@@ -30,14 +30,14 @@ A real MLB play: the runner on second is rounding third on a single to the outfi
 
 ## Design decisions already made (don't relitigate)
 
-1. Hybrid grading. The pool holds only real sends, so every play has a known outcome; real holds are left out because nobody knows what would have happened. The streak grades the result. The timing model grades the decision: P(safe) against the breakeven for the number of outs, shown on the reveal, plus a line ranking the play's P(safe) against every real send ("By the model, riskier than 68% of the 6,472 sends real coaches made"). The ranking exists because the calibrated model rates every pool play above breakeven, so the send/hold verdict alone never varies.
-2. Balanced pool. Real sends score 97% of the time, so `pickPlay()` in `game.js` flips a coin between safe and out plays. Without it, always sending wins. The About dialog says so.
-3. Outs matter. Breakeven comes from RE24 (computed by the pipeline from the same seasons), assuming every trailing runner, batter included, takes an extra base on the throw home. A hold leaves first and third (or the bases loaded); safe adds a run with runners on second (and third); out adds an out with the same trailing runners.
+1. Hybrid grading. The pool holds only real sends, so every play has a known outcome; real holds are left out because nobody knows what would have happened. The streak grades the result. The timing model grades the decision with one number on the reveal, "Model: chance he scores," which is the real-world P(safe) rescaled to the game's 50/50 deal (`pGame` in `model.js`), and the "by the numbers" line calls a send right when it's above 50%. Beta testers read the real-world number (95 to 98% on every play) as a model that always says send, so Jacob chose the rescale. The About dialog says the game is 50/50 while real sends are 97/3.
+2. Balanced pool. Real sends score 97% of the time, so `pickPlay()` in `game.js` flips a coin between safe and out plays. Without it, always sending wins.
+3. The run-expectancy breakeven (RE24, every trailing runner taking an extra base on the throw) is analysis for the README and LinkedIn, not part of the game. Jacob wants the deeper analytics off the game page; he cut the earlier risk-ranking line ("riskier than 68% of real sends") and the "Needed to send" tile for that reason.
 4. Video streams from MLB. The original plan was to rehost clips in the repo, but MLB's clip server (`sporty-clips.mlb.com`) answers scripted downloads with a Cloudflare block. Don't try to get around it. The pipeline reads each play's mp4 URL from its Savant `sporty-videos` page, and the visitor's browser plays it straight from MLB (verified cross-origin, Oct 2026). A hand-saved `clips/<play_id>.mp4` wins over the stream. If a clip fails, the reveal falls back to a "Watch it on Baseball Savant" link.
 5. Animated field, then the real clip. The animation is a recreation built from play data, not tracking data. It always shows the real result: `throwArriveShown` in `model.js` nudges the throw so the animation matches what happened even when the model disagrees, and the model's own number still shows on the reveal. Everything after the call plays at `FINISH_SPEED` (1.3x, in `game.js`), runner and ball together, so the race is unchanged. On the reveal the clip covers the field area (`#clipStage`) with a "Show the field" toggle in the panel; on phones it's pinned to the top of that area so it sits on screen under the verdict.
-6. The right column reads top to bottom: scorebug (inning, outs, score, postseason round), then the read (runner, outfielder, batted ball) before the call, or the reveal after it. The scorebug used to sit on top of the field; Jacob moved it so the player's eyes don't jump between the field and the panel. Keep the read's type large; he has asked twice for it to be bigger.
+6. The right column reads top to bottom: scorebug (inning, outs, score, postseason round), then "The situation" before the call, or the reveal after it. The situation has three primary stats in the same style (runner's sprint speed, outfielder's arm, distance from home where the ball was fielded), each a big stencil number with a meter and a scouting line, then a row of facts (batted ball, exit velocity, trailing runners). The scorebug used to sit on top of the field; Jacob moved it so the player's eyes don't jump between the field and the panel. Keep the type large; he has asked three times for it to be bigger. At 1440x900 the column just fits without scrolling, so check that when adding anything.
 7. Storage goes through one module. `window.Store` (`js/store.js`) holds coaches, streaks and settings in `localStorage` (keys `windmill.users.v1`, `windmill.lastUser`, `windmill.timer`, `windmill.sound`, `windmill.device`), every access wrapped in try/catch, and talks to the leaderboard.
-8. Shared leaderboard on Supabase, over plain REST with no client library. `js/config.js` holds the project URL and publishable key; both are public by design. `supabase/schema.sql` creates an insert-and-read-only `streaks` table plus `board_all_time` and `board_week` views (each coach's best, names matched without case). Every streak counts whatever the clock; each row records the most lenient clock used during the streak (off counts as most lenient). A streak posts when it ends, when the coach switches, or when the page is hidden mid-streak (`keepalive` fetch); posting the same run again at a higher value is harmless because the views keep each coach's best. With `js/config.js` empty, every leaderboard link stays hidden and the game works offline.
+8. Shared leaderboard on Supabase, over plain REST with no client library. `js/config.js` holds the project URL and publishable key; both are public by design. `supabase/schema.sql` (re-runnable) creates an insert-and-read-only `streaks` table plus `board_all_time` and `board_week` views (each coach's best per clock setting, names matched without case), and an insert-only `suggestions` table that only Jacob reads, in the dashboard. The leaderboard page has a board per mode (Hard 3, Regular 5, Easy 8, No clock 0) and opens on the visitor's own mode. Each row records the most lenient clock used during the streak (no clock counts as most lenient). A streak posts when it ends, when the coach switches, or when the page is hidden mid-streak (`keepalive` fetch); posting the same run again at a higher value is harmless because the views keep each coach's best. With `js/config.js` empty, the leaderboard and suggestion links (class `online-only`) stay hidden and the game works offline. The 12-second clock was dropped in Oct 2026; a saved 12 loads as 5.
 9. No build step. Static files run straight from `index.html`, from `file://` or GitHub Pages. Scripts are classic globals, not modules, so `file://` works.
 10. One model, two languages. `pipeline/model.R` and `js/model.js` implement the same timing model. The pipeline fits the two calibration coefficients and ships them in `window.MODEL_FIT`; every play also carries R's `p_model`, and `game.js` logs a console warning if `WM.timeline(p).pSafe` differs by more than 0.002. Change both files together.
 11. Physics hand-set, calibration fit. A first attempt also freed `throwCarry`, `speedFactor` and an offset. On real data they ran to the edges of their ranges (throws at 46% of arm strength, which made the animation's throws crawl) and scored worse than a flat rate out of sample. Don't refit physical constants on sends-only data without a much richer feature set.
@@ -46,17 +46,17 @@ A real MLB play: the runner on second is rounding third on a single to the outfi
 ## File map
 
 ```
-index.html              the game: scoreboard header, field canvas, call bar, login overlay, scorebug, read, reveal, About dialog
-leaderboard.html        shared leaderboard page (all time and last 7 days)
+index.html              the game: scoreboard header, field canvas, call bar, login overlay, scorebug, situation, reveal, About and Suggestions dialogs
+leaderboard.html        shared leaderboard page: a board per mode, all time or last 7 days
 css/style.css           all styles; tokens on :root; breakpoints at 980px and 560px; respects prefers-reduced-motion
 js/config.js            Supabase URL and publishable key (empty = no leaderboard)
-js/model.js             window.WM: field geometry, constants K with MODEL_FIT overrides, default RE24, breakeven(), timeline(play)
-js/store.js             window.Store: coaches, streaks, settings, device id, submitStreak(), fetchBoard()
+js/model.js             window.WM: field geometry, constants K with MODEL_FIT overrides, timeline(play), gameChance() (the 50/50 rescale)
+js/store.js             window.Store: coaches, streaks, settings, device id, submitStreak(), fetchBoard(), submitSuggestion()
 js/field.js             window.Field: canvas renderer (static layer cached offscreen, ResizeObserver) and per-frame positions
-js/game.js              state machine, UI, play selection, clock, reveal, risk ranking, clip, leaderboard posting, keyboard, R/JS parity check
+js/game.js              state machine, UI, play selection, clock, reveal, clip, leaderboard posting, suggestions, coach-name placeholders, keyboard, R/JS parity check
 js/leaderboard.js       leaderboard page
-data/plays.js           GENERATED: window.PLAYS_META, RE24, MODEL_FIT, PLAYS
-supabase/schema.sql     leaderboard tables, policies and views; run once in the Supabase SQL editor
+data/plays.js           GENERATED: window.PLAYS_META, MODEL_FIT, PLAYS
+supabase/schema.sql     leaderboard and suggestion tables, policies and views; run (or rerun) in the Supabase SQL editor
 favicon.svg, og-image.png   tab icon and 1200x630 social card
 .nojekyll               tells GitHub Pages to serve files as they are
 clips/                  optional hand-saved <play_id>.mp4 (git-ignored by default)
@@ -78,7 +78,9 @@ Script order on the game page: `data/plays.js`, `config.js`, `model.js`, `store.
 
 ## Game state machine (`game.js`)
 
-`login`, then `approach` (animate from 0 to `decisionT`), then `decide` (frozen frame and clock), then `resolve` (animate the send; on a hold or timeout, the hold animation and then a faded replay of the real send), then `reveal` (verdict, model numbers, risk ranking, clip; Enter or the button deals the next play).
+`login`, then `approach` (animate from 0 to `decisionT`), then `decide` (frozen frame and clock), then `resolve` (animate the send; on a hold or timeout, the hold animation and then a faded replay of the real send), then `reveal` (verdict, the model's game-scaled chance, clip; Enter or the button deals the next play).
+
+The coach-name box shows a random real third base coach as its placeholder (`COACHES` in `game.js`, one per team, 2026 season, from worldbaseball.com's 2026 staff list plus Gary Pettis replacing Hector Borg with the Giants in June 2026). Offseason moves will date it; the Astros already let Tony Perezchica go on Oct 14 2026.
 
 `decide("timeout")` counts as wrong; the coach gives no signal and the runner pulls up like a hold. The clip's `<video>` is created when each play starts so it buffers during the animation. Clips start muted; once a visitor unmutes one, later clips try to play with sound (`windmill.sound`).
 
@@ -94,6 +96,8 @@ The ball's travel time is distance / (launch_speed * ballFactor[type]), clamped 
 
 `margin = throwArrive + tagTime - tHome` in seconds, and `logit pSafe = calibIntercept + calibSlope * margin`. The call comes at `decisionT = max(0.9, min(tField + 0.15, tAt3B - 0.2))`.
 
+The reveal shows `pGame`, the same chance for a play dealt 50/50: the odds `pSafe / (1 - pSafe)` times `(1 - r) / r`, where `r` is the real safe rate among sends (`1 - n_out / n` from `MODEL_FIT`, 0.9685). On the pool, safe plays get a median of 54% and outs 48% (5th to 95th percentile 32% to 69%), and the model leans the right way on about 62% of plays. `pSafe` stays the number checked against R's `p_model`.
+
 `calibIntercept` and `calibSlope` come from `glm(safe ~ margin, binomial)` on every labeled send (`04_fit.R`). Everything else in `K` is hand-set because it drives the animation. The hand-set calibration defaults are 0 and 1/0.28.
 
 The fit uses sends only, so it estimates P(safe | the coach sent him). It says nothing reliable about holds, which is why the coach table compares coaches with breakeven directly instead of with the model.
@@ -104,7 +108,7 @@ Results from the full run on Oct 23 2026 (2024 to 2026, postseason through Oct 1
 - Calibration: `logit P = 2.84 (SE 0.10) + 0.516 (SE 0.07) * margin`. 5-fold CV: Brier 0.0304 against 0.0305 for a flat rate, log loss 0.136 against 0.140, AUC 0.664. The hand-set physics ranks plays the same (AUC 0.665) but is badly calibrated (Brier 0.073).
 - Pieces of the margin (`model_terms.csv`): runner time -1.46 per second (z -6.0) and ball-to-fielder time +0.65 per second (z +4.5) carry the signal. Throw time from arm and distance doesn't (z 0.7) once coaches have filtered whom to send. Two outs -0.45 (z -2.9): two-out sends are riskier.
 - Coaches vs. breakeven (`coach_decisions.csv`): with 0 outs they send 48%, sends score 97.6%, breakeven 74%; 1 out, 62%, 96.7%, 62%; 2 outs, 94%, 96.7%, 42%.
-- Every pool play's P(safe) falls between 0.95 and 0.98, above every breakeven. That's why the reveal adds the risk ranking (`META.send_p_quantiles`, the 0th to 100th percentiles of P(safe) over all 6,472 sends).
+- Every pool play's real-world P(safe) falls between 0.95 and 0.98, above every breakeven, which is why the game shows the 50/50-rescaled `pGame` instead.
 
 ## Play data schema (`data/plays.js`)
 
@@ -115,14 +119,15 @@ Results from the full run on Oct 23 2026 (2024 to 2026, postseason through Oct 1
   runner:  { name, sprint_speed /* ft/s */, imputed: bool },
   batter:  { name },
   fielder: { name, pos: "LF"|"CF"|"RF", arm_mph, imputed: bool },
-  batted_ball: { type: "ground_ball"|"line_drive"|"fly_ball"|"popup", x, y /* ft */, launch_speed },
+  batted_ball: { type: "ground_ball"|"line_drive"|"fly_ball"|"popup", x, y /* ft */, launch_speed,
+                 ev_imputed: bool /* Statcast had no exit velocity; the game shows "n/a" */ },
   result: "safe"|"out",
   description, play_id, clip /* MLB mp4 URL, "clips/<id>.mp4", or null */,
   p_model /* R's P(safe), for the parity check */
 }
 ```
 
-`PLAYS_META`: `{ demo, seasons, built, ref: { speed: {min,max,avg}, arm: {min,max,avg} }, n_safe, n_out, n_postseason, send_p_quantiles, game_types }`. `ref` sets the scouting meters (2nd and 98th percentile of regulars). `MODEL_FIT`: `{ K: { calibIntercept, calibSlope }, n, n_out, seasons, metrics: { base_rate, hand_tuned, fitted_cv: { log_loss, brier, auc } } }`; the About dialog quotes it.
+`PLAYS_META`: `{ demo, seasons, built, ref: { speed, arm, dist: {min,max,avg} }, n_safe, n_out, n_postseason, game_types }`. `ref` sets the meters: 2nd and 98th percentile of regulars for speed and arm, and of all sends' fielding distance for `dist` (186 to 332 ft, average 257). `MODEL_FIT`: `{ K: { calibIntercept, calibSlope }, n, n_out, seasons, metrics: { base_rate, hand_tuned, fitted_cv: { log_loss, brier, auc } } }`; the About dialog quotes it.
 
 ## Pipeline (`Rscript pipeline/run.R`)
 
@@ -142,19 +147,19 @@ The look is a painted-steel ballpark manual scoreboard: deep green board, a rive
 - Tokens: `--board #1e3a2b`, `--board-deep #142a1e`, `--board-line #2d5240`, `--chalk #eef0e8`, `--chalk-dim #a9bcae`, `--signal #f2c230`, `--out #e0553f`, `--clay #9a6743`.
 - Fonts from Google Fonts: Saira Stencil One for display numerals and headings, Barlow Condensed for labels and buttons, Barlow for body text.
 - Copy is sentence case and plain: "Send him," "Hold him," "Next play," "Right call. Streak: 3." No all-caps labels and no arrows on buttons. The SAFE and OUT umpire calls on the field are the one exception.
-- At 980px and below the right column stacks above the field. At 560px and below the read becomes a compact two-column card.
+- At 980px and below the right column stacks above the field. At 560px and below the situation becomes a compact card (runner and fielder side by side, distance across), the coach name hides, and the header links wrap to two lines. On a 375x812 phone the Send and Hold buttons end about 75px below the screen.
 - The R charts use the same palette (`theme_board()` in `04_fit.R`).
 
 ## Verified so far (Oct 2026, Windows, local static server and in-app Chromium)
 
 - Full 2024 to 2026 pipeline run (39 minutes the first time with a parallel Statcast prefetch; about two minutes cached). All six feed-vs-description label disagreements are the case the feed is there for: the runner from second scored and a trailing runner was out at home.
-- Game loop at 1440x900 and 375x812: login, approach, decide, send, reveal with the MLB clip over the field; hold with the replay; 3-second timeout; timer persists; risk ranking shows. On phones the scorebug, read, field and buttons fit in 812px. No console errors; R/JS parity max difference 5e-5. 40 sampled clip URLs (20 random, 20 that were broken before the unescape fix) all load cross-origin.
+- Game loop at 1440x900 and 375x812: login, approach, decide, send, reveal with the MLB clip over the field; hold with the replay; 3-second timeout; timer persists; the model's game-scaled chance varies (38% and 71% on two test plays); mode tabs and the suggestion dialog. No console errors; R/JS parity max difference 5e-5. 40 sampled clip URLs (20 random, 20 that were broken before the unescape fix) all load cross-origin.
 - Live site checked after publishing: data, fonts and a clip playing from MLB on the github.io domain.
 - Testing note: the in-app browser pane must be visible for rAF to run, and screenshots of a large emulated viewport in a narrow pane can't be read; measure layout in JS or snapshot the canvas with `toBlob`.
 
 ## Next steps
 
-1. The leaderboard is connected (Supabase project `ontyfvpcpcjqxktghmed`, free tier, created Oct 23 2026). Tested end to end: a streak posts from the game and reads back from both views, and the public key can't edit or delete rows or insert an invalid clock. Jacob moderates by deleting rows in the Supabase dashboard (Table Editor, or `delete from public.streaks where ...` in the SQL editor). Free projects pause after a week without traffic; if the board stops loading, restore the project from the dashboard.
+1. The leaderboard is connected (Supabase project `ontyfvpcpcjqxktghmed`, free tier, created Oct 23 2026). Tested end to end: a streak posts from the game and reads back from both views, and the public key can't edit or delete rows or insert an invalid clock. Jacob moderates by deleting rows in the Supabase dashboard (Table Editor, or `delete from public.streaks where ...` in the SQL editor) and reads suggestions in the `suggestions` table. Free projects pause after a week without traffic; if the board stops loading, restore the project from the dashboard. When testing the game against the live database, stub `Store.submitStreak` or every test streak lands on the public board.
 2. Model features worth trying: hang time from launch angle for air balls instead of the flat `ballFactor`, or the per-piece regression (`model_terms.csv`) as the game's model in place of the single margin.
 3. The LinkedIn write-up (Jacob asked to be reminded). Lead with `coaches_vs_breakeven.png`: with nobody out, coaches send 48% of the time and those sends score 97.6% against a 74% breakeven, so they're holding runners who would usually score (the known finding that coaches are too conservative, on 2024 to 2026 data). Back it with `send_summary_by_outs.csv` and the finding that arm strength doesn't separate safe from out among sends. Match the voice of his "Scottie Effect" post: a punchy, specific question, a clear finding, and a chart.
 

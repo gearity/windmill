@@ -32,14 +32,20 @@
     <section class="panel">
       <div class="lb-head">
         <h2 class="panel-title">Leaderboard</h2>
-        <div class="lb-tabs" role="tablist">
+        <div class="lb-tabs" id="rangeTabs" role="tablist" aria-label="Time range">
           <button type="button" role="tab" class="lb-tab" data-range="all" aria-selected="true">All time</button>
           <button type="button" role="tab" class="lb-tab" data-range="week" aria-selected="false">Last 7 days</button>
         </div>
       </div>
+      <div class="lb-tabs lb-modes" id="modeTabs" role="tablist" aria-label="Mode">
+        <button type="button" role="tab" class="lb-tab" data-clock="3">Hard <small>3 sec</small></button>
+        <button type="button" role="tab" class="lb-tab" data-clock="5">Regular <small>5 sec</small></button>
+        <button type="button" role="tab" class="lb-tab" data-clock="8">Easy <small>8 sec</small></button>
+        <button type="button" role="tab" class="lb-tab" data-clock="0">No clock</button>
+      </div>
       <p class="lb-status" id="lbStatus">Loading the board.</p>
       <table class="lb-table" id="lbTable" hidden>
-        <thead><tr><th>#</th><th>Coach</th><th class="num">Streak</th><th>Clock</th><th>When</th></tr></thead>
+        <thead><tr><th>#</th><th>Coach</th><th class="num">Streak</th><th>When</th></tr></thead>
         <tbody id="lbBody"></tbody>
       </table>
     </section>

@@ -37,15 +37,15 @@
       <div class="coach-actions">
         <label class="timer-pick">Clock
           <select id="timerSelect">
-            <option value="3">3 sec</option>
-            <option value="5" selected>5 sec</option>
-            <option value="8">8 sec</option>
-            <option value="12">12 sec</option>
-            <option value="0">Off</option>
+            <option value="3">3 sec (hard)</option>
+            <option value="5" selected>5 sec (regular)</option>
+            <option value="8">8 sec (easy)</option>
+            <option value="0">Off (no clock)</option>
           </select>
         </label>
-        <a class="link-btn board-link" href="leaderboard.html" hidden>Leaderboard</a>
+        <a class="link-btn online-only" href="leaderboard.html" hidden>Leaderboard</a>
         <button class="link-btn" id="aboutBtn" type="button">How it works</button>
+        <button class="link-btn online-only" id="suggestBtn" type="button" hidden>Suggestions</button>
         <button class="link-btn" id="switchBtn" type="button">Switch coach</button>
       </div>
     </div>
@@ -74,7 +74,7 @@
         <input id="username" name="username" maxlength="20" autocomplete="nickname" required placeholder="e.g. jgearity">
         <button type="submit" class="call call-send">Start coaching</button>
         <div class="local-board" id="localBoard"></div>
-        <a class="board-link login-board-link" href="leaderboard.html" hidden>See the leaderboard</a>
+        <a class="online-only login-board-link" href="leaderboard.html" hidden>See the leaderboard</a>
       </form>
     </section>
 
@@ -89,7 +89,7 @@
       </div>
 
       <aside class="panel" id="scout" aria-label="Scouting report">
-        <h2 class="panel-title">The read</h2>
+        <h2 class="panel-title">The situation</h2>
         <div class="scout-block">
           <p class="who"><span class="who-role">Runner on second</span><span class="who-name" id="runnerName">–</span></p>
           <div class="stat">
@@ -108,9 +108,17 @@
           <div class="meter" id="armMeter"><span class="meter-avg" title="MLB average"></span><span class="meter-dot"></span></div>
           <p class="meter-words" id="armWords"></p>
         </div>
+        <div class="scout-block">
+          <div class="stat">
+            <span class="stat-label">Fielded from home</span>
+            <span class="stat-val" id="bbDist">–</span>
+          </div>
+          <div class="meter" id="distMeter"><span class="meter-avg" title="Average send"></span><span class="meter-dot"></span></div>
+          <p class="meter-words" id="distWords"></p>
+        </div>
         <div class="scout-block facts">
           <div><span>Batted ball</span><strong id="bbType">–</strong></div>
-          <div><span>Fielded</span><strong id="bbDist">–</strong></div>
+          <div><span>Exit velocity</span><strong id="bbEV">–</strong></div>
           <div><span>Trailing runners</span><strong id="trailing">–</strong></div>
         </div>
         <p class="demo-note" id="demoNote" hidden>Demo plays with made-up players. Run the data pipeline to load real MLB sends.</p>
@@ -122,10 +130,8 @@
         <p class="reveal-desc" id="revealDesc"></p>
         <div class="numbers">
           <div><span>Model: chance he scores</span><strong id="pSafe">–</strong></div>
-          <div><span>Needed to send with <b id="beOuts"></b></span><strong id="beVal">–</strong></div>
         </div>
         <p class="process" id="process"></p>
-        <p class="risk" id="risk" hidden></p>
         <div class="clip-meta" id="clipMeta"></div>
         <button class="call call-send next" id="nextBtn" type="button">Next play <kbd>Enter</kbd></button>
       </aside>
@@ -137,16 +143,30 @@
       <h2>How it works</h2>
       <p>Every play here is a real MLB play where the third base coach sent a runner home from second on a single to the outfield. You watch the play develop, then the clock starts. Send him or hold him.</p>
       <p>Your streak grows when you send a runner who scored, or hold one who was thrown out at the plate in real life. It ends when you send a runner who was thrown out, hold one who scored, or let the clock run out. Coaches don't get a timeout.</p>
-      <p>Real coaches mostly send when it's safe, so the game deals safe and out plays about equally. Otherwise you could send every time and never lose. <span id="poolNote"></span></p>
+      <p>In real baseball, about 97 of every 100 sends score. This game deals safe plays and outs 50/50, so sending every time won't keep a streak alive. <span id="poolNote"></span></p>
       <h3>The model</h3>
       <p>After each call you get a second grade. A timing model estimates how long the runner needs to get home, from his Statcast sprint speed, and how long the ball needs to get there, from where it was fielded and the outfielder's arm. The gap between the two becomes the chance he scores.</p>
       <p id="fitNote"></p>
-      <p>How big a chance you need depends on outs. With two outs, an out at the plate costs little, so sending pays if he scores a bit under half the time. With nobody out, a hold leaves first and third with nobody out, so he needs to score about three times in four. Those thresholds come from a run expectancy table built from the same seasons, assuming the trailing runners each take an extra base on the throw.</p>
-      <p>The streak is graded on what really happened, and the model grades the decision. Sometimes the right call gets thrown out.</p>
+      <p>That chance is adjusted for the game's 50/50 deal, so the model calls a send right when it gives him better than even odds. The streak is graded on what really happened, and the model grades the decision. Sometimes the right call gets thrown out.</p>
       <h3>The animation</h3>
       <p>The field animation is a recreation built from the play data. It isn't tracked from video, and it always ends the way the real play did. The broadcast clip plays after you decide.</p>
       <p class="about-credit">Built by Jacob Gearity. Data from MLB Statcast via Baseball Savant and the MLB Stats API. Video streams from MLB. Not affiliated with MLB.</p>
       <button class="call call-send" value="close">Back to the box</button>
+    </form>
+  </dialog>
+
+  <dialog id="suggest">
+    <form class="about suggest" id="suggestForm">
+      <h2>Suggestions</h2>
+      <label for="suggestText">What should change?</label>
+      <textarea id="suggestText" maxlength="2000" rows="5" required></textarea>
+      <label for="suggestName">Your name (optional)</label>
+      <input id="suggestName" maxlength="40" autocomplete="name">
+      <p class="suggest-status" id="suggestStatus" aria-live="polite"></p>
+      <div class="suggest-actions">
+        <button type="submit" class="call call-send" id="suggestSend">Send</button>
+        <button type="button" class="call call-hold" id="suggestClose">Close</button>
+      </div>
     </form>
   </dialog>
 

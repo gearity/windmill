@@ -18,9 +18,11 @@ Every play is a real MLB play from 2024 to 2026, postseason included, where the 
 | Hold | Safe | Over |
 | Clock runs out | Either | Over |
 
-Coaches mostly send when it's safe, so the game deals safe and out plays 50/50. Otherwise you could send every time and never lose.
+In real baseball about 97% of sends score, so the game deals safe and out plays 50/50. Otherwise you could send every time and never lose.
 
-The streak is graded on the result. A timing model grades the decision. It compares the runner's time to the plate (from his Statcast sprint speed) with the ball's (from where it was fielded and the outfielder's Statcast arm strength), turns the gap into a chance he scores, and compares that with the breakeven for the number of outs from a run expectancy (RE24) table. The reveal also ranks the play against every real send by how risky the model thought it was.
+The streak is graded on the result. A timing model grades the decision. It compares the runner's time to the plate (from his Statcast sprint speed) with the ball's (from where it was fielded and the outfielder's Statcast arm strength) and turns the gap into a chance he scores. The game adjusts that chance for its 50/50 deal with Bayes' rule, and the model calls a send right when the adjusted chance is above 50%.
+
+The clock has four settings: 3 seconds (hard), 5 (regular), 8 (easy), and no clock. Each has its own leaderboard.
 
 ## What the data says
 
@@ -40,12 +42,12 @@ It's a static site with no build step. Double-click `index.html`, or serve the f
 
 ## The leaderboard
 
-Finished streaks go to a shared leaderboard (`leaderboard.html`) stored in a free Supabase project. To set up your own:
+Finished streaks go to a shared leaderboard (`leaderboard.html`), and the Suggestions box sends feedback to the same free Supabase project. To set up your own:
 
-1. Create a Supabase project and run `supabase/schema.sql` in its SQL editor.
+1. Create a Supabase project and run `supabase/schema.sql` in its SQL editor. The script is safe to run again after it changes.
 2. Put the project URL and its publishable (anon) key in `js/config.js`.
 
-The key is public by design. The database lets anyone add a streak and read the board, and nothing else. Names aren't verified. With `js/config.js` left empty, the game runs without a leaderboard and the links to it stay hidden.
+The key is public by design. The database lets anyone add a streak and read the board, and send a suggestion that only the project owner can read. Names aren't verified. With `js/config.js` left empty, the game runs without a leaderboard or suggestion box and the links to them stay hidden.
 
 ## Rebuilding the data
 
@@ -82,7 +84,7 @@ Clips stream from MLB's servers in the visitor's browser, and nothing is rehoste
 index.html, leaderboard.html   the two pages
 css/, js/                      styles and scripts (model.js, store.js, field.js, game.js, leaderboard.js)
 js/config.js                   Supabase URL and public key for the leaderboard
-data/plays.js                  generated play data, RE24, and the fitted model
+data/plays.js                  generated play data and the fitted model
 pipeline/                      R data pipeline; out/ holds the analysis tables and charts
 supabase/schema.sql            leaderboard database setup
 clips/                         optional hand-saved clips
