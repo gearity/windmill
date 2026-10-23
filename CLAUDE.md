@@ -142,7 +142,7 @@ Concept: a painted-steel ballpark **manual scoreboard**. Deep green board with a
 
 ## Next steps (priority order)
 
-1. **Publish** to GitHub Pages (GitHub account: `gearity`; gh is signed in); set absolute `og:image` / `og:url` once the URL is known; add the live link to the README.
+1. **Published** Oct 23 2026: repo https://github.com/gearity/windmill (public), live at https://gearity.github.io/windmill/ (Pages from `main` root; every push redeploys). `og:url`, `og:image` and the canonical link in `index.html` are absolute to that URL; change them if the site moves. Commits use a repo-local identity (Jacob Gearity, gearity noreply email).
 2. **Decide what the "by the numbers" grade should say** now that the calibrated model calls every pool play a send (see results above).
 3. **Model features worth trying:** hang time from launch angle for air balls instead of the flat `ballFactor`; using the per-piece regression (`model_terms.csv`) as the game's model instead of the single margin.
 4. **The LinkedIn write-up (Jacob explicitly asked to be reminded).** Lead with `coaches_vs_breakeven.png`: with 0 outs coaches send 48% of the time and those sends score 97.6%, against a 74% breakeven, so they're holding runners who'd usually score (the known "coaches are too conservative" finding, on 2024–26 data). Support with `send_summary_by_outs.csv` and the finding that arm strength doesn't separate safe from out among sends. Match the voice of his "Scottie Effect" post: a punchy, specific question, a clear finding, and a chart.

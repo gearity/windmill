@@ -2,6 +2,8 @@
 
 A runner is rounding third on a base hit. You have five seconds. Send him or hold him.
 
+**Play it: [gearity.github.io/windmill](https://gearity.github.io/windmill/)**
+
 Every play is a real MLB play from 2024–2026 (postseason included) where the third base coach waved the runner home from second on a single to the outfield. You watch it develop on an animated field, make the call as the runner nears third, and then see what actually happened, including the broadcast clip. Build a streak of correct calls.
 
 ![Windmill](og-image.png)
@@ -32,7 +34,7 @@ From 8,982 real decisions in 2024–2026 (runner on second, third base open, sin
 
 ## Running it
 
-It's a static site with no build step. Double-click `index.html`, or serve the folder with any static server. Online, it runs on GitHub Pages straight from the repo root.
+It's a static site with no build step. Double-click `index.html`, or serve the folder with any static server. Online, it runs on GitHub Pages straight from the `main` branch root, so every push redeploys it.
 
 ## Rebuilding the data
 
