@@ -1,0 +1,30 @@
+{
+  "K": {
+    "calibIntercept": 2.8396,
+    "calibSlope": 0.5164
+  },
+  "se": {
+    "calibIntercept": 0.0981,
+    "calibSlope": 0.0725
+  },
+  "n": 6472,
+  "n_out": 204,
+  "seasons": "2024-2026",
+  "metrics": {
+    "base_rate": {
+      "log_loss": 0.14,
+      "brier": 0.0305,
+      "auc": 0.498
+    },
+    "hand_tuned": {
+      "log_loss": 0.3032,
+      "brier": 0.0727,
+      "auc": 0.665
+    },
+    "fitted_cv": {
+      "log_loss": 0.1364,
+      "brier": 0.0304,
+      "auc": 0.664
+    }
+  }
+}

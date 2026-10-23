@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windmill: Third Base Coach Simulator</title>
+  <meta name="description" content="Real MLB plays. A runner is rounding third. Send him or hold him, and build a streak of correct calls.">
+  <meta name="theme-color" content="#1e3a2b">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Windmill: Third Base Coach Simulator">
+  <meta property="og:description" content="Real MLB plays. A runner is rounding third. Send him or hold him, and build a streak of correct calls.">
+  <meta property="og:image" content="og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="board">
+    <div class="brand">
+      <h1>Windmill</h1>
+      <p>You're coaching third. Send him or hold him.</p>
+    </div>
+    <div class="tiles" aria-live="polite">
+      <div class="tile tile-streak"><span class="tile-num" id="streak">0</span><span class="tile-label">Streak</span></div>
+      <div class="tile"><span class="tile-num" id="best">0</span><span class="tile-label">Best</span></div>
+      <div class="tile"><span class="tile-num" id="record">0-0</span><span class="tile-label">Right–wrong</span></div>
+    </div>
+    <div class="coach-meta">
+      <span class="coach-name" id="coachName">No coach yet</span>
+      <div class="coach-actions">
+        <label class="timer-pick">Clock
+          <select id="timerSelect">
+            <option value="3">3 sec</option>
+            <option value="5" selected>5 sec</option>
+            <option value="8">8 sec</option>
+            <option value="12">12 sec</option>
+            <option value="0">Off</option>
+          </select>
+        </label>
+        <button class="link-btn" id="aboutBtn" type="button">How it works</button>
+        <button class="link-btn" id="switchBtn" type="button">Switch coach</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="field-wrap" aria-label="Play animation">
+      <div class="stage">
+        <div class="situation" id="situation" hidden>
+          <span class="sit-round" id="sitRound" hidden></span>
+          <span class="sit-inning" id="sitInning"></span>
+          <span class="sit-outs" id="sitOuts"></span>
+          <span class="sit-score" id="sitScore"></span>
+        </div>
+        <canvas id="field" role="img" aria-label="Top-down view of the field showing the runner, ball and outfielder"></canvas>
+        <div class="clip-stage" id="clipStage" hidden></div>
+      </div>
+
+      <div class="callbar" id="callbar">
+        <div class="clock" aria-hidden="true"><div class="clock-fill" id="clockFill"></div></div>
+        <div class="calls">
+          <button class="call call-send" id="sendBtn" type="button" disabled>Send him <kbd>S</kbd></button>
+          <button class="call call-hold" id="holdBtn" type="button" disabled>Hold him <kbd>H</kbd></button>
+        </div>
+        <p class="call-hint" id="callHint" aria-live="polite">Watch the ball. You'll get the call as he nears third.</p>
+      </div>
+
+      <form class="login" id="login">
+        <h2>Take the box</h2>
+        <p>Pick a coach name. Your streaks save on this device.</p>
+        <label for="username">Coach name</label>
+        <input id="username" name="username" maxlength="20" autocomplete="nickname" required placeholder="e.g. jgearity">
+        <button type="submit" class="call call-send">Start coaching</button>
+        <div class="local-board" id="localBoard"></div>
+      </form>
+    </section>
+
+    <aside class="panel" id="scout" aria-label="Scouting report">
+      <h2 class="panel-title">The read</h2>
+      <div class="scout-block">
+        <p class="who"><span class="who-role">Runner on second</span><span class="who-name" id="runnerName">–</span></p>
+        <div class="stat">
+          <span class="stat-label">Sprint speed</span>
+          <span class="stat-val" id="runnerSpeed">–</span>
+        </div>
+        <div class="meter" id="runnerMeter"><span class="meter-avg" title="MLB average"></span><span class="meter-dot"></span></div>
+        <p class="meter-words" id="runnerWords"></p>
+      </div>
+      <div class="scout-block">
+        <p class="who"><span class="who-role" id="fielderRole">Outfielder</span><span class="who-name" id="fielderName">–</span></p>
+        <div class="stat">
+          <span class="stat-label">Arm strength</span>
+          <span class="stat-val" id="fielderArm">–</span>
+        </div>
+        <div class="meter" id="armMeter"><span class="meter-avg" title="MLB average"></span><span class="meter-dot"></span></div>
+        <p class="meter-words" id="armWords"></p>
+      </div>
+      <div class="scout-block facts">
+        <div><span>Batted ball</span><strong id="bbType">–</strong></div>
+        <div><span>Fielded</span><strong id="bbDist">–</strong></div>
+        <div><span>Trailing runners</span><strong id="trailing">–</strong></div>
+      </div>
+      <p class="demo-note" id="demoNote" hidden>Demo plays with invented players. Run the data pipeline to load real MLB sends.</p>
+    </aside>
+
+    <aside class="panel reveal" id="reveal" hidden aria-live="polite">
+      <p class="verdict" id="verdict"></p>
+      <h2 class="reveal-title" id="revealTitle"></h2>
+      <p class="reveal-desc" id="revealDesc"></p>
+      <div class="numbers">
+        <div><span>Model: chance he scores</span><strong id="pSafe">–</strong></div>
+        <div><span>Needed to send with <b id="beOuts"></b></span><strong id="beVal">–</strong></div>
+      </div>
+      <p class="process" id="process"></p>
+      <div class="clip-meta" id="clipMeta"></div>
+      <button class="call call-send next" id="nextBtn" type="button">Next play <kbd>Enter</kbd></button>
+    </aside>
+  </main>
+
+  <dialog id="about">
+    <form method="dialog" class="about">
+      <h2>How it works</h2>
+      <p>Every play here is a real MLB play where the third base coach sent a runner home from second on a single to the outfield. You see the play develop, then the clock starts. Send him or hold him.</p>
+      <ul>
+        <li><b>Send, and he scores:</b> streak continues.</li>
+        <li><b>Hold, and he was thrown out in real life:</b> streak continues.</li>
+        <li><b>Send, and he's out</b>, or <b>hold, and he scored:</b> streak's over.</li>
+        <li><b>The clock runs out:</b> streak's over. Coaches don't get a timeout.</li>
+      </ul>
+      <p>Real coaches mostly send when it's safe, so the game draws safe and out plays about equally. Otherwise you could just send every time. <span id="poolNote"></span></p>
+      <h3>The model</h3>
+      <p>After each call you'll see a second grade. A timing model estimates how long the runner needs to get home (from his Statcast sprint speed) and how long the ball takes to get there (from where it was fielded and the outfielder's arm strength). The gap between the two becomes a probability he scores.</p>
+      <p id="fitNote"></p>
+      <p>Whether that probability is good enough depends on outs. With two outs an out at the plate barely costs anything, so you should send on a coin flip. With nobody out, holding gives you first and third with no outs, so you need to be close to sure. The thresholds come from a run expectancy table built from the same seasons, assuming the trailing runners take an extra base on the throw.</p>
+      <p>The streak is graded on what really happened. The model grades the decision. Sometimes the right call gets thrown out.</p>
+      <h3>The animation</h3>
+      <p>The field animation is built from the play data, not tracked from video, so think of it as a recreation. It always ends the way the real play did. The broadcast clip plays after you decide.</p>
+      <p class="about-credit">Built by Jacob Gearity. Data from MLB Statcast via Baseball Savant and the MLB Stats API. Video streams from MLB. Not affiliated with MLB.</p>
+      <button class="call call-send" value="close">Back to the box</button>
+    </form>
+  </dialog>
+
+  <script src="data/plays.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/field.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
