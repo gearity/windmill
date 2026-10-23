@@ -103,7 +103,7 @@ Results from the full run on Oct 23 2026 (2024 to 2026, postseason through Oct 1
 - 559,650 PAs, 7,413 games, 9,094 candidates. Feed labels: 6,323 safe, 205 out, 2,524 held, 20 error, 19 unclear, 3 out elsewhere. 6,472 sends with features (16 imputed sprint speeds, 280 imputed arms). Pool: 1,704 plays (all 204 outs and 1,500 safes, 27 from the postseason), 1,703 with a clip.
 - Calibration: `logit P = 2.84 (SE 0.10) + 0.516 (SE 0.07) * margin`. 5-fold CV: Brier 0.0304 against 0.0305 for a flat rate, log loss 0.136 against 0.140, AUC 0.664. The hand-set physics ranks plays the same (AUC 0.665) but is badly calibrated (Brier 0.073).
 - Pieces of the margin (`model_terms.csv`): runner time -1.46 per second (z -6.0) and ball-to-fielder time +0.65 per second (z +4.5) carry the signal. Throw time from arm and distance doesn't (z 0.7) once coaches have filtered whom to send. Two outs -0.45 (z -2.9): two-out sends are riskier.
-- Coaches vs. breakeven (`coach_decisions.csv`): with 0 outs they send 48%, sends score 97.6%, breakeven 74%; 1 out, 62%, 96.7%, 62%; 2 outs, 94%, 96.7%, 43%.
+- Coaches vs. breakeven (`coach_decisions.csv`): with 0 outs they send 48%, sends score 97.6%, breakeven 74%; 1 out, 62%, 96.7%, 62%; 2 outs, 94%, 96.7%, 42%.
 - Every pool play's P(safe) falls between 0.95 and 0.98, above every breakeven. That's why the reveal adds the risk ranking (`META.send_p_quantiles`, the 0th to 100th percentiles of P(safe) over all 6,472 sends).
 
 ## Play data schema (`data/plays.js`)
