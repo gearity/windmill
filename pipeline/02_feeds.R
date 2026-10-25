@@ -10,8 +10,9 @@
 #   held              stopped at third
 #   error / unclear   an error on his advance, or the feed didn't say
 # Only "safe" and "out" are sends the game and the model use. It also gives each
-# play's Savant playId, which Statcast's CSV doesn't carry.
-# Output object: cands, now with label, of_assist, play_id.
+# play's Savant playId, which Statcast's CSV doesn't carry, and the state the play
+# left behind, which the breakeven needs (model.R).
+# Output object: cands, now with label, play_id, runs_on_play, outs_on_play, bases_after.
 
 FEED_FIELDS <- paste(c("allPlays", "about", "atBatIndex", "runners", "movement", "end", "isOut", "outBase",
                        "details", "runner", "id", "credits", "position", "abbreviation", "credit",
@@ -39,6 +40,21 @@ label_runner <- function(play, runner_id) {
   "unclear"
 }
 
+# Runs scored, outs made, and bases occupied when the play was over, from where
+# every runner (batter included) ended up.
+end_state <- function(play) {
+  ids <- map_dbl(play$runners, \(r) as.numeric(r$details$runner$id %||% NA))
+  fate <- map_chr(unique(ids), function(id) {
+    moves <- play$runners[ids %in% id]
+    if (any(map_lgl(moves, \(r) isTRUE(r$movement$isOut)))) return("out")
+    ends <- map_chr(moves, \(r) r$movement$end %||% NA_character_)
+    if ("score" %in% ends) return("score")
+    intersect(c("3B", "2B", "1B"), ends)[1]   # furthest base reached
+  })
+  list(runs = sum(fate == "score", na.rm = TRUE), outs = sum(fate == "out", na.rm = TRUE),
+       bases = base_state(match("1B", fate), match("2B", fate), match("3B", fate)))
+}
+
 parse_game <- function(pk, rows) {
   f <- feed_path(pk)
   feed <- tryCatch(fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
@@ -49,10 +65,12 @@ parse_game <- function(pk, rows) {
     if (is.na(j)) return(tibble(at_bat_number = rows$at_bat_number[i], label = "unclear", play_id = NA_character_))
     play <- feed$allPlays[[j]]
     pitches <- keep(play$playEvents, \(e) isTRUE(e$isPitch))
+    end <- end_state(play)
     tibble(
       at_bat_number = rows$at_bat_number[i],
       label = label_runner(play, rows$on_2b[i]),
-      play_id = if (length(pitches)) pitches[[length(pitches)]]$playId %||% NA_character_ else NA_character_
+      play_id = if (length(pitches)) pitches[[length(pitches)]]$playId %||% NA_character_ else NA_character_,
+      runs_on_play = end$runs, outs_on_play = end$outs, bases_after = end$bases
     )
   }) |> mutate(game_pk = pk)
 }

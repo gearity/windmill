@@ -57,11 +57,13 @@ model_terms <- as_tibble(summary(terms_fit)$coefficients, rownames = "term") |>
 write_csv(model_terms, file.path(OUT, "model_terms.csv"))
 message("Logistic regression on the margin's pieces:"); print(model_terms)
 
+be_cells <- breakeven_table(bind_rows(sends, holds), re24) |> select(outs, runner_on_first, breakeven)
 sends <- sends |>
-  mutate(p_model = model_times(sends, K_FIT)$p_safe, p_oof = oof,
-         breakeven = breakeven(outs, runner_on_first, re24))
+  mutate(p_model = model_times(sends, K_FIT)$p_safe, p_oof = oof) |>
+  left_join(be_cells, by = c("outs", "runner_on_first"))
 holds <- holds |>
-  mutate(p_model = model_times(holds, K_FIT)$p_safe, breakeven = breakeven(outs, runner_on_first, re24))
+  mutate(p_model = model_times(holds, K_FIT)$p_safe) |>
+  left_join(be_cells, by = c("outs", "runner_on_first"))
 
 calib <- sends |>
   mutate(bin = ntile(p_oof, 10)) |>
@@ -91,9 +93,9 @@ coach_tbl <- bind_rows(coach |> mutate(outs = as.character(outs)), coach |> muta
     breakeven = mean(breakeven),
     .groups = "drop"
   ) |>
-  mutate(cushion = safe_rate_on_sends - breakeven,
-         across(where(is.double), \(x) round(x, 3)))
-write_csv(coach_tbl, file.path(OUT, "coach_decisions.csv"))
+  mutate(cushion = safe_rate_on_sends - breakeven)
+# Rounded only in the CSV, so the chart's percents don't round twice (0.4346 to 0.435 to 44%).
+write_csv(coach_tbl |> mutate(across(where(is.double), \(x) round(x, 3))), file.path(OUT, "coach_decisions.csv"))
 message("Real coaches vs. breakeven:"); print(coach_tbl)
 
 # --- Charts -----------------------------------------------------------------------
@@ -138,18 +140,19 @@ g3 <- ggplot(by_outs, aes(y = outs)) +
   geom_segment(aes(x = breakeven, xend = safe_rate_on_sends, yend = outs), colour = "#2d5240", linewidth = 6) +
   geom_point(aes(x = breakeven), colour = "#a9bcae", size = 5) +
   geom_point(aes(x = safe_rate_on_sends), colour = "#f2c230", size = 6) +
+  # Breakeven labels go under the line: with nobody out the two points nearly touch.
   geom_text(aes(x = breakeven, label = paste0("Needed ", scales::percent(breakeven, 1))),
-            colour = "#a9bcae", vjust = -1.4, size = 3.8) +
+            colour = "#a9bcae", vjust = 2.4, size = 3.8) +
   geom_text(aes(x = safe_rate_on_sends, label = paste0("Sends scored ", scales::percent(safe_rate_on_sends, 1))),
             colour = "#f2c230", vjust = -1.4, hjust = 0.8, size = 3.8) +
   geom_text(aes(x = 0.3, label = paste0("Sent ", scales::percent(send_rate, 1), " of the time")),
-            colour = "#eef0e8", hjust = 0, vjust = 2.2, size = 3.6) +
+            colour = "#eef0e8", hjust = 0, vjust = -1.4, size = 3.6) +
   scale_x_continuous(labels = scales::percent, limits = c(0.3, 1.02)) +
   scale_y_discrete(limits = rev) +
   labs(title = "Third base coaches only send near-sure things",
        subtitle = "Runner on second, single to the outfield: how often sends scored vs. the success rate that breaks even",
        x = NULL, y = NULL,
-       caption = sprintf("%s decisions (%s sends, %s holds), %s. Breakeven from RE24 on the same seasons.",
+       caption = sprintf("%s decisions (%s sends, %s holds), %s. Breakeven from RE24 on the same seasons, with trailing runners where they ended up.",
                          format(nrow(coach), big.mark = ","), format(nrow(sends), big.mark = ","),
                          format(nrow(holds), big.mark = ","), model_fit$seasons)) +
   theme_board()

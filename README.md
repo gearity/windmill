@@ -30,7 +30,9 @@ From 8,982 real decisions in 2024 to 2026 (runner on second, third base open, si
 
 ![Coaches vs. breakeven](pipeline/out/coaches_vs_breakeven.png)
 
-Third base coaches only send near-sure things. With nobody out they send 48% of the time, and those sends score 97.6%, against a breakeven of 74%. With two outs they send 94% of the time and score 96.7%, against a breakeven of 42%. When sends clear breakeven by that much, coaches are holding runners who would usually have scored.
+Third base coaches only send near-sure things. With one out they send 62% of the time, and those sends score 96.7%, against a breakeven of 73%. With two outs they send 94% of the time and score 96.7%, against a breakeven of 43%. When sends clear breakeven by that much, coaches are holding runners who would usually have scored. With nobody out, sends score 97.6% against a breakeven of 94%, close enough that holding there is about right.
+
+The breakeven comes from RE24 and from where the trailing runners actually ended up. On safe sends the batter stays at first about 9 times in 10, and first and third with nobody out is worth almost as much as a run plus a man on first.
 
 In a logistic regression on the pieces of the timing model, two things separate the 3% of sends thrown out at home: the runner's time to the plate and how fast the ball reached the outfielder. The outfielder's arm strength and throw distance don't, once coaches have already decided whom to send. Two-out sends are riskier.
 

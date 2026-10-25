@@ -61,17 +61,21 @@ re_value <- function(re24, state, outs) {
   vapply(seq_along(state), \(i) if (outs[i] >= 3) 0 else re24[[state[i]]][outs[i] + 1], numeric(1))
 }
 
-# Breakeven P(safe) for sending the runner from second on a base hit.
-# Assumes every trailing runner (batter included) takes an extra base on the throw home.
-#   Hold: 1st & 3rd (loaded if a runner started on 1st), same outs
-#   Safe: +1 run, trailing runners on 2nd (and 3rd), same outs
-#   Out:  +1 out, trailing runners on 2nd (and 3rd)
-breakeven <- function(outs, runner_on_first, re24) {
-  hold <- re_value(re24, ifelse(runner_on_first, "123", "1_3"), outs)
-  after <- ifelse(runner_on_first, "_23", "_2_")
-  safe <- 1 + re_value(re24, after, outs)
-  out <- re_value(re24, after, outs + 1)
-  pmin(0.99, pmax(0.01, (hold - out) / (safe - out)))
+# Breakeven P(safe) for sending the runner from second on a base hit. Each real hold or
+# send is worth its runs plus the RE24 of the bases and outs it left, so trailing runners
+# count where they actually ended up. (On safe sends the batter stays at first about 9
+# times in 10; assuming everyone takes an extra base on the throw overstates what a send
+# is worth.) Within each outs and runner-on-first cell, with V the average value of holds,
+# safe sends and outs at home:
+#   breakeven = (V_hold - V_out) / (V_safe - V_out)
+# d needs: outs, runner_on_first, label ("held", "safe", "out"), runs_on_play, outs_on_play, bases_after
+breakeven_table <- function(d, re24) {
+  d |>
+    mutate(value = runs_on_play + re_value(re24, bases_after, outs + outs_on_play)) |>
+    group_by(outs, runner_on_first) |>
+    summarise(n = n(), v_hold = mean(value[label == "held"]), v_safe = mean(value[label == "safe"]),
+              v_out = mean(value[label == "out"]), .groups = "drop") |>
+    mutate(breakeven = pmin(0.99, pmax(0.01, (v_hold - v_out) / (v_safe - v_out))))
 }
 
 # Scoring rules
