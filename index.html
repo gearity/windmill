@@ -33,7 +33,7 @@
       <div class="tile"><span class="tile-num" id="record">0-0</span><span class="tile-label">Right–wrong</span></div>
     </div>
     <div class="coach-meta">
-      <span class="coach-name" id="coachName">No coach yet</span>
+      <span class="coach-name" id="coachName"></span>
       <div class="coach-actions">
         <label class="timer-pick">Clock
           <select id="timerSelect">
@@ -64,7 +64,7 @@
           <button class="call call-send" id="sendBtn" type="button" disabled>Send him <kbd>S</kbd></button>
           <button class="call call-hold" id="holdBtn" type="button" disabled>Hold him <kbd>H</kbd></button>
         </div>
-        <p class="call-hint" id="callHint" aria-live="polite">Watch the ball. You'll get the call as he nears third.</p>
+        <p class="call-hint" id="callHint" aria-live="polite"></p>
       </div>
 
       <form class="login" id="login">
@@ -100,7 +100,7 @@
           <p class="meter-words" id="runnerWords"></p>
         </div>
         <div class="scout-block">
-          <p class="who"><span class="who-role" id="fielderRole">Outfielder</span><span class="who-name" id="fielderName">–</span></p>
+          <p class="who"><span class="who-role" id="fielderRole"></span><span class="who-name" id="fielderName">–</span></p>
           <div class="stat">
             <span class="stat-label">Arm strength</span>
             <span class="stat-val" id="fielderArm">–</span>
@@ -172,9 +172,12 @@
 
   <script src="data/plays.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/copy.js"></script>
   <script src="js/model.js"></script>
   <script src="js/store.js"></script>
   <script src="js/field.js"></script>
   <script src="js/game.js"></script>
+  <!-- ?edit loads the text editor, which lives in the gearity.github.io repo -->
+  <script>if (new URLSearchParams(location.search).has("edit")) document.body.append(Object.assign(document.createElement("script"), { src: "/edit.js" }));</script>
 </body>
 </html>

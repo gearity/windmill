@@ -43,7 +43,7 @@
         <button type="button" role="tab" class="lb-tab" data-clock="8">Easy <small>8 sec</small></button>
         <button type="button" role="tab" class="lb-tab" data-clock="0">No clock</button>
       </div>
-      <p class="lb-status" id="lbStatus">Loading the board.</p>
+      <p class="lb-status" id="lbStatus"></p>
       <table class="lb-table" id="lbTable" hidden>
         <thead><tr><th>#</th><th>Coach</th><th class="num">Streak</th><th>When</th></tr></thead>
         <tbody id="lbBody"></tbody>
@@ -52,7 +52,10 @@
   </main>
 
   <script src="js/config.js"></script>
+  <script src="js/copy.js"></script>
   <script src="js/store.js"></script>
   <script src="js/leaderboard.js"></script>
+  <!-- ?edit loads the text editor, which lives in the gearity.github.io repo -->
+  <script>if (new URLSearchParams(location.search).has("edit")) document.body.append(Object.assign(document.createElement("script"), { src: "/edit.js" }));</script>
 </body>
 </html>

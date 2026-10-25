@@ -2,6 +2,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const Store = window.Store;
+  const say = (key) => String(window.COPY[key] ?? key);   // page text, from js/copy.js
   const me = Store.lastUser().toLowerCase();
   const LIMIT = 50;
   const CLOCKS = [3, 5, 8, 0];
@@ -38,17 +39,17 @@
     document.querySelectorAll("#rangeTabs .lb-tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.range === view.range)));
     document.querySelectorAll("#modeTabs .lb-tab").forEach((b) => b.setAttribute("aria-selected", String(Number(b.dataset.clock) === view.clock)));
     $("lbStatus").hidden = false;
-    $("lbStatus").textContent = "Loading the board.";
+    $("lbStatus").textContent = say("boardLoading");
     try {
       const rows = await Store.fetchBoard(view.range, view.clock, LIMIT);
       render(rows);
       $("lbStatus").hidden = rows.length > 0;
-      $("lbStatus").textContent = "No streaks yet.";
+      $("lbStatus").textContent = say("boardEmpty");
     } catch (e) {
       $("lbTable").hidden = true;
       $("lbStatus").textContent = Store.online
-        ? "Couldn't reach the leaderboard. Try again in a minute."
-        : "The leaderboard isn't connected yet.";
+        ? say("boardDown")
+        : say("boardOffline");
     }
   }
 

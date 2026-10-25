@@ -84,6 +84,7 @@ Clips stream from MLB's servers in the visitor's browser, and nothing is rehoste
 index.html, leaderboard.html   the two pages
 css/, js/                      styles and scripts (model.js, store.js, field.js, game.js, leaderboard.js)
 js/config.js                   Supabase URL and public key for the leaderboard
+js/copy.js                     every line of text the scripts put on the page
 data/plays.js                  generated play data and the fitted model
 pipeline/                      R data pipeline; out/ holds the analysis tables and charts
 supabase/schema.sql            leaderboard database setup

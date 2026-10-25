@@ -1,6 +1,7 @@
 // Windmill: top-down field renderer + play animation.
 (function () {
   const { BASES } = window.WM;
+  const say = (key) => String(window.COPY[key] ?? key);   // canvas labels, from js/copy.js
 
   const C = {
     grassA: "#3d7a39",
@@ -276,7 +277,7 @@
       }
       arms.forEach(([dx, dy]) => { ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + dx, q.y + dy); ctx.stroke(); });
       ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fillStyle = C.wall; ctx.fill(); ctx.stroke();
-      this.label("You", q.x, q.y + r + arm + Math.max(16, this.scale * 12.5));  // below the arms' full reach
+      this.label(say("fieldCoach"), q.x, q.y + r + arm + Math.max(16, this.scale * 12.5));  // below the arms' full reach
     }
 
     draw(frame) {
@@ -316,13 +317,13 @@
       }
 
       // Fielders.
-      this.dot({ x: 0, y: -5 + (ball.thrown && mode !== "hold" ? 4 : 0) }, r * 0.85, C.fielder, C.fielderRing, "C");
+      this.dot({ x: 0, y: -5 + (ball.thrown && mode !== "hold" ? 4 : 0) }, r * 0.85, C.fielder, C.fielderRing, say("fieldCatcher"));
       this.dot(this.fielderPos(t), r, C.fielder, C.fielderRing, this.play.fielder.pos);
       this.dot({ x: 0, y: 60.5 + (t > 1 ? -12 * clamp01((t - 1) / 2) : 0) }, r * 0.75, C.fielder, C.fielderRing); // pitcher backing up
       this.dot(this.batterPos(t), r * 0.8, "rgba(242,194,48,0.65)", null);
 
       // Runner.
-      this.dot(this.runnerPos(sNow), r, frame.ghost ? C.ghost : C.runner, C.wall, "R");
+      this.dot(this.runnerPos(sNow), r, frame.ghost ? C.ghost : C.runner, C.wall, say("fieldRunner"));
 
       // Ball + shadow.
       const bq = this.P(ball.pos);
@@ -340,7 +341,7 @@
         ctx.font = `${Math.max(36, Math.round(s * 30))}px "Saira Stencil One", Impact, sans-serif`;
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
         ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,40,28,0.92)";
-        const txt = frame.umpire === "safe" ? "SAFE" : "OUT";
+        const txt = say(frame.umpire === "safe" ? "umpSafe" : "umpOut");
         const x = hp.x + Math.max(22, 16 * s), y = hp.y - Math.max(24, 16 * s);
         ctx.strokeText(txt, x, y);
         ctx.fillStyle = frame.umpire === "safe" ? C.chalk : C.out;

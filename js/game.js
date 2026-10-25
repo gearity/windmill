@@ -8,6 +8,8 @@
   // Everything after the call (throw, dash home, hold, replay) plays this much faster than
   // real time. Runner and ball speed up together, so the safe/out race is unchanged.
   const FINISH_SPEED = 1.3;
+  // Page text from js/copy.js, with {slots} filled in. Read at call time so edit mode's changes show up.
+  const say = (key, vals = {}) => String(window.COPY[key] ?? key).replace(/\{(\w+)\}/g, (m, k) => (k in vals ? vals[k] : m));
 
   // League reference points for the scouting meters. The pipeline overrides these.
   const REF = Object.assign({
@@ -58,7 +60,7 @@
     setTile("streak", state.streak);
     setTile("best", u ? u.best : 0);
     setTile("record", u ? `${u.right}-${u.wrong}` : "0-0");
-    $("coachName").textContent = state.user ? `Coach ${state.user}` : "No coach yet";
+    $("coachName").textContent = state.user ? say("coachName", { name: state.user }) : say("noCoach");
   }
 
   function renderLocalBoard() {
@@ -66,7 +68,7 @@
     const box = $("localBoard");
     box.innerHTML = "";
     if (!rows.length) return;
-    const h = document.createElement("h3"); h.textContent = "Best streaks on this device"; box.appendChild(h);
+    const h = document.createElement("h3"); h.textContent = say("localBoard"); box.appendChild(h);
     const ol = document.createElement("ol");
     rows.forEach(({ name, best }) => {
       const li = document.createElement("li");
@@ -102,7 +104,7 @@
     state.phase = "login";
     $("login").hidden = false;
     $("username").value = Store.lastUser();
-    $("username").placeholder = "e.g. " + COACHES[Math.floor(Math.random() * COACHES.length)];
+    $("username").placeholder = say("namePlaceholder", { coach: COACHES[Math.floor(Math.random() * COACHES.length)] });
     renderLocalBoard();
     setCallsEnabled(false);
     $("username").focus();
@@ -132,14 +134,14 @@
     const span = (s) => String(s || "").replace("-", " to ");
     if (fit && fit.metrics) {
       const m = fit.metrics;
-      $("fitNote").textContent =
-        `It was fit on ${n(fit.n)} real sends from ${span(fit.seasons)}, ${n(fit.n_out)} of them thrown out at home. ` +
-        `On plays it wasn't fit on, it picks the thrown-out runner as the riskier send ${Math.round(m.fitted_cv.auc * 100)}% of the time.`;
+      $("fitNote").textContent = say("fitNote", {
+        sends: n(fit.n), seasons: span(fit.seasons), outs: n(fit.n_out), auc: Math.round(m.fitted_cv.auc * 100) + "%",
+      });
     } else {
-      $("fitNote").textContent = "Its numbers are hand-set estimates until the data pipeline fits them to real sends.";
+      $("fitNote").textContent = say("fitNoteDemo");
     }
     $("poolNote").textContent = META.demo ? "" :
-      `The pool has ${n(PLAYS.length)} plays from ${span(META.seasons)}` + (META.n_postseason ? ", postseason included." : ".");
+      say(META.n_postseason ? "poolNotePostseason" : "poolNote", { plays: n(PLAYS.length), seasons: span(META.seasons) });
   }
 
   // ---------- play selection: balanced between real safes and real outs ----------
@@ -160,33 +162,33 @@
     el.querySelector(".meter-avg").style.left = pct(ref.avg) + "%";
     el.querySelector(".meter-dot").style.left = pct(val) + "%";
   }
+  // Scouting lines: each returns a copy.js key.
   function speedWords(v) {
     const d = v - REF.speed.avg;
-    if (d >= 2.5) return "Elite speed. Among the fastest in the league.";
-    if (d >= 1) return "Plus runner.";
-    if (d >= -0.8) return "About average.";
-    if (d >= -2) return "Below average.";
-    return "Slow. Station-to-station type.";
+    if (d >= 2.5) return "speedElite";
+    if (d >= 1) return "speedPlus";
+    if (d >= -0.8) return "speedAverage";
+    if (d >= -2) return "speedBelow";
+    return "speedSlow";
   }
   function armWords(v) {
     const d = v - REF.arm.avg;
-    if (d >= 6) return "Cannon. Runners know about this arm.";
-    if (d >= 2.5) return "Plus arm.";
-    if (d >= -2.5) return "About average.";
-    if (d >= -5) return "Below average.";
-    return "Weak arm. Runners test him.";
+    if (d >= 6) return "armCannon";
+    if (d >= 2.5) return "armPlus";
+    if (d >= -2.5) return "armAverage";
+    if (d >= -5) return "armBelow";
+    return "armWeak";
   }
   function distWords(v) {
     const d = v - REF.dist.avg;
-    if (d >= 40) return "Deep. Long throw home.";
-    if (d >= 15) return "A little deep.";
-    if (d >= -15) return "Normal depth.";
-    if (d >= -40) return "Shallow.";
-    return "Very shallow. Short throw home.";
+    if (d >= 40) return "distDeep";
+    if (d >= 15) return "distLittleDeep";
+    if (d >= -15) return "distNormal";
+    if (d >= -40) return "distShallow";
+    return "distVeryShallow";
   }
-  const BB_WORDS = { ground_ball: "Ground ball", line_drive: "Line drive", fly_ball: "Fly ball", popup: "Bloop" };
-  const POS_WORDS = { LF: "Left fielder", CF: "Center fielder", RF: "Right fielder" };
-  const NO_DATA = "No Statcast reading, so this is the league average.";
+  const BB_WORDS = { ground_ball: "ballGround", line_drive: "ballLine", fly_ball: "ballFly", popup: "ballPopup" };
+  const POS_WORDS = { LF: "posLF", CF: "posCF", RF: "posRF" };
   function ordinal(n) { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
   function niceDate(iso) {
     const d = new Date(iso + "T12:00:00");
@@ -196,7 +198,7 @@
 
   function statVal(el, text, imputed) {
     el.textContent = text;
-    if (imputed) { const s = document.createElement("small"); s.textContent = "est."; el.append(" ", s); }
+    if (imputed) { const s = document.createElement("small"); s.textContent = say("estimated"); el.append(" ", s); }
   }
 
   function renderScout(p, tl) {
@@ -205,18 +207,18 @@
     $("runnerName").textContent = p.runner.name;
     statVal($("runnerSpeed"), p.runner.sprint_speed.toFixed(1) + " ft/s", p.runner.imputed);
     meter($("runnerMeter"), p.runner.sprint_speed, REF.speed);
-    $("runnerWords").textContent = p.runner.imputed ? NO_DATA : speedWords(p.runner.sprint_speed);
-    $("fielderRole").textContent = POS_WORDS[p.fielder.pos] || "Outfielder";
+    $("runnerWords").textContent = say(p.runner.imputed ? "noStatcast" : speedWords(p.runner.sprint_speed));
+    $("fielderRole").textContent = say(POS_WORDS[p.fielder.pos] || "posOF");
     $("fielderName").textContent = p.fielder.name;
     statVal($("fielderArm"), p.fielder.arm_mph.toFixed(1) + " mph", p.fielder.imputed);
     meter($("armMeter"), p.fielder.arm_mph, REF.arm);
-    $("armWords").textContent = p.fielder.imputed ? NO_DATA : armWords(p.fielder.arm_mph);
+    $("armWords").textContent = say(p.fielder.imputed ? "noStatcast" : armWords(p.fielder.arm_mph));
     statVal($("bbDist"), Math.round(tl.throwDist) + " ft", false);
     meter($("distMeter"), tl.throwDist, REF.dist);
-    $("distWords").textContent = distWords(tl.throwDist);
-    $("bbType").textContent = BB_WORDS[p.batted_ball.type] || "Base hit";
-    $("bbEV").textContent = p.batted_ball.ev_imputed ? "n/a" : p.batted_ball.launch_speed.toFixed(1) + " mph";
-    $("trailing").textContent = p.runner_on_first ? "Batter and runner on first" : "Just the batter";
+    $("distWords").textContent = say(distWords(tl.throwDist));
+    $("bbType").textContent = say(BB_WORDS[p.batted_ball.type] || "ballOther");
+    $("bbEV").textContent = p.batted_ball.ev_imputed ? say("evMissing") : p.batted_ball.launch_speed.toFixed(1) + " mph";
+    $("trailing").textContent = say(p.runner_on_first ? "trailingFirst" : "trailingNone");
     $("demoNote").hidden = !(META.demo || p.demo);
 
     $("situation").hidden = false;
@@ -262,7 +264,7 @@
   }
 
   function nextPlay() {
-    if (!PLAYS.length) { $("callHint").textContent = "No plays loaded. Check data/plays.js."; return; }
+    if (!PLAYS.length) { $("callHint").textContent = say("noPlays"); return; }
     stopVideo();
     const p = pickPlay();
     const tl = window.WM.timeline(p);
@@ -272,7 +274,7 @@
     state.video = prepareVideo(p);   // start buffering the clip while the play runs
     setCallsEnabled(false);
     setClock(0);
-    $("callHint").textContent = "Watch the ball. You'll get the call as he nears third.";
+    $("callHint").textContent = say("hintWatch");
     run(0, tl.decisionT, (t) => ({ t, mode: "approach", call: null }), startDecision);
   }
 
@@ -282,7 +284,7 @@
     $("sendBtn").focus({ preventScroll: true });
     const limit = state.timer;
     state.callClock = limit;
-    $("callHint").textContent = limit ? `Your call. ${limit} seconds.` : "Your call. No clock.";
+    $("callHint").textContent = limit ? say("hintClock", { seconds: limit }) : say("hintNoClock");
     const tl = state.tl;
     state.clockStart = performance.now();
     const tick = (now) => {
@@ -315,13 +317,13 @@
     });
 
     if (choice === "send") {
-      $("callHint").textContent = "You're waving him home.";
+      $("callHint").textContent = say("hintSend");
       run(tl.decisionT, end, sendFrame(false), finish, FINISH_SPEED);
     } else {
-      $("callHint").textContent = choice === "hold" ? "You put the stop sign up." : "No call. He's stuck in no-man's land.";
+      $("callHint").textContent = say(choice === "hold" ? "hintHold" : "hintTimeout");
       const holdEnd = tl.decisionT + 2.0;
       run(tl.decisionT, holdEnd, (t) => ({ t, mode: "hold", call: choice === "hold" ? "hold" : null }), () => {
-        run(tl.decisionT, end, sendFrame(true, "Real play: the coach sent him"), finish, FINISH_SPEED);
+        run(tl.decisionT, end, sendFrame(true, say("replayBanner")), finish, FINISH_SPEED);
       }, FINISH_SPEED);
     }
   }
@@ -351,32 +353,33 @@
     $("reveal").hidden = false;
     const v = $("verdict");
     v.className = "verdict " + (right ? "good" : "bad");
-    if (right) v.textContent = `Right call. Streak: ${state.streak}.`;
-    else if (choice === "timeout") v.textContent = before ? `Clock ran out. Streak over at ${before}.` : "Clock ran out.";
-    else v.textContent = before ? `Wrong call. Streak over at ${before}.` : "Wrong call.";
+    if (right) v.textContent = say("verdictRight", { streak: state.streak });
+    else if (choice === "timeout") v.textContent = before ? say("verdictTimeoutEnded", { streak: before }) : say("verdictTimeout");
+    else v.textContent = before ? say("verdictWrongEnded", { streak: before }) : say("verdictWrong");
 
     const safe = p.result === "safe";
     let title;
-    if (choice === "send") title = safe ? "Safe at home." : "Out at the plate.";
-    else title = safe ? "He'd have scored." : "He'd have been out.";
-    $("revealTitle").textContent = title;
+    if (choice === "send") title = safe ? "titleSafe" : "titleOut";
+    else title = safe ? "titleHeldSafe" : "titleHeldOut";
+    $("revealTitle").textContent = say(title);
     const when = [roundLabel(p), p.date && p.date !== "Demo" ? niceDate(p.date) : ""].filter(Boolean).join(", ");
     $("revealDesc").textContent = p.description + (when ? ` (${when})` : "");
 
     $("pSafe").textContent = pct(tl.pGame);
 
     const modelCall = tl.pGame >= 0.5 ? "send" : "hold";
-    const modelWord = modelCall === "send" ? "a send" : "a hold";
-    let proc;
-    if (choice === "timeout") proc = `By the numbers this was ${modelWord}.`;
+    const modelSaid = modelCall === "send" ? "modelSend" : "modelHold";
+    const proc = [];
+    if (choice === "timeout") proc.push(modelSaid);
     else if (choice === modelCall) {
-      proc = "By the numbers, that was the right decision.";
-      if (!right) proc += " The result just didn't go your way. That's baseball.";
+      proc.push("modelAgreed");
+      if (!right) proc.push("modelUnlucky");
     } else {
-      proc = `By the numbers this was ${modelWord}.`;
-      if (right) proc += " You got away with one.";
+      proc.push(modelSaid);
+      if (right) proc.push("modelGotAway");
     }
-    $("process").textContent = proc;
+    // One text node per sentence, so edit mode can trace each back to its copy.js entry.
+    $("process").replaceChildren(...proc.flatMap((key, i) => (i ? [" ", say(key)] : [say(key)])));
 
     showClip(p);
     $("nextBtn").focus({ preventScroll: true });
@@ -427,7 +430,7 @@
   function setClipView(show) {
     $("clipStage").hidden = !show;
     const btn = $("clipToggle");
-    if (btn) btn.textContent = show ? "Show the field" : "Show the clip";
+    if (btn) btn.textContent = say(show ? "showField" : "showClip");
     if (state.video) show ? playVideo(state.video) : state.video.pause();
   }
 
@@ -440,8 +443,8 @@
       meta.innerHTML = "";
       const para = document.createElement("p");
       para.className = "clip-note";
-      if (link) para.append("The clip didn't load. ", linkTo(link, "Watch it on Baseball Savant"));
-      else para.textContent = p.demo ? "Demo play, so there's no real footage. Real plays show the clip here." : "No footage for this play.";
+      if (link) para.append(say("clipFailed"), " ", linkTo(link, say("clipFailedLink")));
+      else para.textContent = say(p.demo ? "clipDemo" : "clipNone");
       meta.appendChild(para);
     };
     const vid = state.video;
@@ -456,7 +459,7 @@
     if (link) {
       const credit = document.createElement("span");
       credit.className = "clip-credit";
-      credit.append("Video: MLB. ", linkTo(link, "Open on Baseball Savant"));
+      credit.append(say("clipCredit"), " ", linkTo(link, say("clipCreditLink")));
       meta.appendChild(credit);
     }
     setClipView(true);
@@ -492,7 +495,7 @@
     if (!text) return;
     $("suggestSend").disabled = true;
     const ok = await Store.submitSuggestion(text, $("suggestName").value.trim() || state.user || "");
-    $("suggestStatus").textContent = ok ? "Sent. Thanks." : "That didn't go through. Try again in a minute.";
+    $("suggestStatus").textContent = say(ok ? "suggestSent" : "suggestFailed");
     if (ok) $("suggestText").value = "";
     $("suggestSend").disabled = false;
   });
@@ -506,6 +509,8 @@
 
   // ---------- boot ----------
   renderAbout();
+  $("callHint").textContent = say("hintWatch");
+  $("fielderRole").textContent = say("posOF");
   field.draw({ t: 0, mode: "approach" });
   renderHeader();
   showLogin();

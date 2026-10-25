@@ -50,6 +50,7 @@ index.html              the game: scoreboard header, field canvas, call bar, log
 leaderboard.html        shared leaderboard page: a board per mode, all time or last 7 days
 css/style.css           all styles; tokens on :root; breakpoints at 980px and 560px; respects prefers-reduced-motion
 js/config.js            Supabase URL and publishable key (empty = no leaderboard)
+js/copy.js              window.COPY: every line of text the scripts write, with {slots} the game fills in; edit mode rewrites it
 js/model.js             window.WM: field geometry, constants K with MODEL_FIT overrides, timeline(play), gameChance() (the 50/50 rescale)
 js/store.js             window.Store: coaches, streaks, settings, device id, submitStreak(), fetchBoard(), submitSuggestion()
 js/field.js             window.Field: canvas renderer (static layer cached offscreen, ResizeObserver) and per-frame positions
@@ -74,7 +75,14 @@ pipeline/out/           committed analysis outputs (CSV, JSON, PNG)
 pipeline/cache/         git-ignored download cache
 ```
 
-Script order on the game page: `data/plays.js`, `config.js`, `model.js`, `store.js`, `field.js`, `game.js`. The leaderboard page loads `config.js`, `store.js`, `leaderboard.js`.
+Script order on the game page: `data/plays.js`, `config.js`, `copy.js`, `model.js`, `store.js`, `field.js`, `game.js`. The leaderboard page loads `config.js`, `copy.js`, `store.js`, `leaderboard.js`. Both pages end with a one-line loader that pulls in `/edit.js` when the URL has `?edit`.
+
+## Editing text (`?edit`)
+
+Jacob rewrites site text himself, often. On the live site he opens a page with `?edit`, picks text, rewrites it and saves; the editor commits straight to `main` through the GitHub API with a fine-grained token kept in his browser. The editor (`edit.js`) lives in the gearity.github.io repo and serves both sites, and its CLAUDE.md has the details.
+
+- Text a script puts on the page goes in `js/copy.js` and is read through `say(key, { slot })` at the moment it's shown, never cached, so edit mode's live changes take effect. Keep one entry per line with the value in double quotes; the editor finds entries by that pattern. Text the scripts never touch stays in the HTML, and an element a script fills stays empty in the HTML so there's one source for each line.
+- Edits commit on GitHub, so pull before working locally or the push will be rejected.
 
 ## Game state machine (`game.js`)
 
@@ -169,6 +177,7 @@ Possible later additions, only if he asks: a daily challenge with a fixed seed, 
 
 - Vanilla JS in IIFEs that expose `window.WM`, `window.Store` and `window.Field`. No framework, bundler or npm.
 - Every `localStorage` call goes through `Store` inside try/catch.
+- New UI text goes in `js/copy.js`, not in a string in the code (see "Editing text").
 - Model constants live in `K` with a comment on each, mirrored in `model.R`. Update the README and the About dialog when the model changes.
 - R code uses tidyverse style with the native pipe `|>` (R 4.1 or later) and caches every network call.
 - Run the pipeline from the repo root; it refuses to run anywhere else.
